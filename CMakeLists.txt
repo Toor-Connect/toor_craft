@@ -6,3 +6,5 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add the Field library as a subdirectory
 add_subdirectory(src)
+
+add_subdirectory(examples)

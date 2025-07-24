@@ -16,7 +16,7 @@ public:
 
     void registerType(const std::string &typeName, CreatorFunc creator);
 
-    std::unique_ptr<FieldSchema> create(const std::string &typeName, const FieldSchema &schema) const;
+    std::unique_ptr<FieldSchema> create(const std::string &typeName, const FieldSchemaConfig &config) const;
 
 private:
     std::unordered_map<std::string, CreatorFunc> creators_;
@@ -27,13 +27,14 @@ private:
 };
 
 template <typename FieldType, typename ConfigType>
-void registerFieldType(const std::string &typeName)
+void registerFieldSchemaType(const std::string &typeName)
 {
     FieldSchemaFactory::instance().registerType(typeName, [typeName](const FieldSchemaConfig &config)
-                                                {
+    {
         auto derivedConfig = dynamic_cast<const ConfigType*>(&config);
         if (!derivedConfig) {
             throw std::runtime_error("Invalid config type for " + typeName);
         }
-        return std::make_unique<FieldType>(*derivedConfig); });
+        return std::make_unique<FieldType>(*derivedConfig);
+    });
 }
