@@ -1,5 +1,5 @@
 # Define source files for Field library
-set(FIELD_SOURCES
+set(SOURCES
     BooleanFieldValue.cpp
     EnumFieldValue.cpp
     FloatFieldValue.cpp
@@ -7,10 +7,10 @@ set(FIELD_SOURCES
     StringFieldValue.cpp
 )
 
-add_library(FieldValuesLib STATIC ${FIELD_SOURCES})
+add_library(FieldValueLib STATIC ${SOURCES})
 
-target_link_libraries(FieldValuesLib PUBLIC FieldSchemaLib)
+target_link_libraries(FieldValueLib PUBLIC FieldSchemaLib)
 
-target_include_directories(FieldValuesLib PUBLIC
+target_include_directories(FieldValueLib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )

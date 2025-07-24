@@ -13,6 +13,7 @@ struct FloatFieldSchemaConfig : FieldSchemaConfig {
 class FloatFieldSchema : public FieldSchema {
 public:
     explicit FloatFieldSchema(const FloatFieldSchemaConfig& config);
+    std::string getTypeName() const override { return "float"; }
 
 private:
     std::optional<double> minValue_;

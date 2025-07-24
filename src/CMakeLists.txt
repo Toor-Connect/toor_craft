@@ -1,3 +1,6 @@
 add_subdirectory(FieldSchema)
 add_subdirectory(FieldSchemaFactory)
 add_subdirectory(FieldValue)
+add_subdirectory(FieldValueFactory)
+add_subdirectory(EntitySchema)
+add_subdirectory(Entity)

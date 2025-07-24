@@ -46,6 +46,8 @@ public:
     const std::string &getName() const { return name_; }
     bool isRequired() const { return required_; }
     const std::optional<std::string> &getAlias() const { return alias_; }
+    virtual std::string getTypeName() const = 0;
+    const FieldSchemaConfig& getConfig() const { return config_; }
 
     // Add a rule to this field
     void addRule(std::unique_ptr<FieldRuleSchema> rule)
@@ -70,6 +72,6 @@ protected:
     std::string name_;
     bool required_;
     std::optional<std::string> alias_;
-
+    FieldSchemaConfig config_;
     std::vector<std::unique_ptr<FieldRuleSchema>> rules_;
 };

@@ -11,4 +11,5 @@ struct StringFieldSchemaConfig : FieldSchemaConfig {
 class StringFieldSchema : public FieldSchema {
 public:
     explicit StringFieldSchema(const StringFieldSchemaConfig& config);
+    std::string getTypeName() const override { return "string"; }
 };

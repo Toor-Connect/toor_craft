@@ -13,6 +13,7 @@ struct EnumFieldSchemaConfig : FieldSchemaConfig {
 class EnumFieldSchema : public FieldSchema {
 public:
     explicit EnumFieldSchema(const EnumFieldSchemaConfig& config);
+    std::string getTypeName() const override { return "enum"; }
 
 private:
     std::vector<std::string> allowedValues_;

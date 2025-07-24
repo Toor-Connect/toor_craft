@@ -14,6 +14,7 @@ struct IntegerFieldSchemaConfig : FieldSchemaConfig {
 class IntegerFieldSchema : public FieldSchema {
 public:
     explicit IntegerFieldSchema(const IntegerFieldSchemaConfig& config);
+    std::string getTypeName() const override { return "integer"; }
 
 private:
     std::optional<int64_t> minValue_;

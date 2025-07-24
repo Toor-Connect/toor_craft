@@ -11,4 +11,5 @@ struct BooleanFieldSchemaConfig : FieldSchemaConfig {
 class BooleanFieldSchema : public FieldSchema {
 public:
     explicit BooleanFieldSchema(const BooleanFieldSchemaConfig& config);
+    std::string getTypeName() const override { return "boolean"; }
 };

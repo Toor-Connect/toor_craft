@@ -1,9 +1,9 @@
 # Define source files for Field library
-set(FIELD_SOURCES
+set(SOURCES
     FieldSchemaFactory.cpp
 )
 
-add_library(FieldSchemaFactoryLib STATIC ${FIELD_SOURCES})
+add_library(FieldSchemaFactoryLib STATIC ${SOURCES})
 
 target_link_libraries(FieldSchemaFactoryLib PUBLIC FieldSchemaLib)
 
