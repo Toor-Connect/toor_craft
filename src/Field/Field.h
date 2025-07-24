@@ -34,8 +34,9 @@ public:
     {
     }
 
-    Field(const Field &) = default;
-    Field &operator=(const Field &) = default;
+
+    Field(const Field&) = delete;
+    Field& operator=(const Field&) = delete;
     Field(Field &&) = default;
     Field &operator=(Field &&) = default;
 
