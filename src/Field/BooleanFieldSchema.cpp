@@ -1,8 +1,8 @@
-#include "BooleanField.h"
+#include "BooleanFieldSchema.h"
 #include <vector>
 #include <algorithm>
 
-class BooleanRule : public FieldRule {
+class BooleanRuleSchema : public FieldRuleSchema {
 public:
     bool apply(const std::optional<std::string>& value, std::string& error) const override {
         if (!value.has_value()) return true;
@@ -16,7 +16,7 @@ public:
     }
 };
 
-BooleanField::BooleanField(const BooleanFieldConfig& config)
-    : Field(config) {
-    addRule(std::make_unique<BooleanRule>());
+BooleanFieldSchema::BooleanFieldSchema(const BooleanFieldSchemaConfig& config)
+    : FieldSchema(config) {
+    addRule(std::make_unique<BooleanRuleSchema>());
 }

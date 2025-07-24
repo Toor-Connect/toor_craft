@@ -1,10 +1,10 @@
-#include "FloatField.h"
+#include "IntegerFieldSchema.h"
 #include <charconv>
 
-class FloatRangeRule : public FieldRule
+class IntegerRangeRuleSchema : public FieldRuleSchema
 {
 public:
-    FloatRangeRule(std::optional<double> minVal, std::optional<double> maxVal)
+    IntegerRangeRuleSchema(std::optional<int64_t> minVal, std::optional<int64_t> maxVal)
         : minValue_(minVal), maxValue_(maxVal) {}
 
     bool apply(const std::optional<std::string> &value, std::string &error) const override
@@ -14,7 +14,13 @@ public:
         const auto &valStr = *value;
         try
         {
-            double val = std::stod(valStr);
+            size_t pos;
+            int64_t val = std::stoll(valStr, &pos);
+            if (pos != valStr.size())
+            {
+                error = "Value '" + valStr + "' contains invalid characters.";
+                return false;
+            }
             if (minValue_ && val < *minValue_)
             {
                 error = "Value " + valStr + " is less than minimum " + std::to_string(*minValue_);
@@ -28,18 +34,18 @@ public:
         }
         catch (...)
         {
-            error = "Value '" + valStr + "' is not a valid float.";
+            error = "Value '" + valStr + "' is not a valid integer.";
             return false;
         }
         return true;
     }
 
 private:
-    std::optional<double> minValue_;
-    std::optional<double> maxValue_;
+    std::optional<int64_t> minValue_;
+    std::optional<int64_t> maxValue_;
 };
 
-FloatField::FloatField(const FloatFieldConfig& config)
-    : Field(config) {
-    addRule(std::make_unique<FloatRangeRule>(config.minValue, config.maxValue));
+IntegerFieldSchema::IntegerFieldSchema(const IntegerFieldSchemaConfig& config)
+    : FieldSchema(config) {
+    addRule(std::make_unique<IntegerRangeRuleSchema>(config.minValue, config.maxValue));
 }

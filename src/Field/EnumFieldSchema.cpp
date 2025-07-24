@@ -1,10 +1,10 @@
-#include "EnumField.h"
+#include "EnumFieldSchema.h"
 #include <algorithm>
 
-class EnumRule : public FieldRule
+class EnumRuleSchema : public FieldRuleSchema
 {
 public:
-    explicit EnumRule(std::vector<std::string> allowed) : allowedValues_(std::move(allowed)) {}
+    explicit EnumRuleSchema(std::vector<std::string> allowed) : allowedValues_(std::move(allowed)) {}
 
     bool apply(const std::optional<std::string> &value, std::string &error) const override
     {
@@ -23,7 +23,7 @@ private:
     std::vector<std::string> allowedValues_;
 };
 
-EnumField::EnumField(const EnumFieldConfig& config)
-    : Field(config) {
-    addRule(std::make_unique<EnumRule>(config.allowedValues));
+EnumFieldSchema::EnumFieldSchema(const EnumFieldSchemaConfig& config)
+    : FieldSchema(config) {
+    addRule(std::make_unique<EnumRuleSchema>(config.allowedValues));
 }

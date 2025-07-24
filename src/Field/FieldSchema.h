@@ -5,29 +5,29 @@
 #include <memory>
 #include <vector>
 
-class FieldRule
+class FieldRuleSchema
 {
 public:
-    virtual ~FieldRule() = default;
+    virtual ~FieldRuleSchema() = default;
 
     virtual bool apply(const std::optional<std::string> &value, std::string &error) const = 0;
 };
 
 // Base configuration struct for all fields
-struct FieldConfig
+struct FieldSchemaConfig
 {
     std::string name;
     bool required = false;
     std::optional<std::string> alias;
 
-    virtual ~FieldConfig() = default;
+    virtual ~FieldSchemaConfig() = default;
 };
 
 // Abstract base class for all field types
-class Field
+class FieldSchema
 {
 public:
-    explicit Field(const FieldConfig &config)
+    explicit FieldSchema(const FieldSchemaConfig &config)
         : name_(config.name),
           required_(config.required),
           alias_(config.alias)
@@ -35,12 +35,12 @@ public:
     }
 
 
-    Field(const Field&) = delete;
-    Field& operator=(const Field&) = delete;
-    Field(Field &&) = default;
-    Field &operator=(Field &&) = default;
+    FieldSchema(const FieldSchema&) = delete;
+    FieldSchema& operator=(const FieldSchema&) = delete;
+    FieldSchema(FieldSchema &&) = default;
+    FieldSchema &operator=(FieldSchema &&) = default;
 
-    virtual ~Field() = default;
+    virtual ~FieldSchema() = default;
 
     // Getters for field properties
     const std::string &getName() const { return name_; }
@@ -48,7 +48,7 @@ public:
     const std::optional<std::string> &getAlias() const { return alias_; }
 
     // Add a rule to this field
-    void addRule(std::unique_ptr<FieldRule> rule)
+    void addRule(std::unique_ptr<FieldRuleSchema> rule)
     {
         rules_.push_back(std::move(rule));
     }
@@ -71,5 +71,5 @@ protected:
     bool required_;
     std::optional<std::string> alias_;
 
-    std::vector<std::unique_ptr<FieldRule>> rules_;
+    std::vector<std::unique_ptr<FieldRuleSchema>> rules_;
 };
