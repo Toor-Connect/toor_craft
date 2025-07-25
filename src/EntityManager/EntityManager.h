@@ -6,6 +6,8 @@
 #include <memory>
 #include "Entity.h"
 
+class EntityManager;
+
 class IEntityQuery {
 public:
     virtual ~IEntityQuery() = default;
@@ -41,6 +43,8 @@ public:
 
     // Validate an entity by ID
     bool validateEntity(const std::string& entityId, std::string& error);
+
+    std::vector<Entity*> query(const IEntityQuery& query) const;
 
 private:
     EntityManager() = default;

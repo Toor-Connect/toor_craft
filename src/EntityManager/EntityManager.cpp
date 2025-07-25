@@ -102,3 +102,7 @@ bool EntityManager::validateEntity(const std::string& entityId, std::string& err
     }
     return entity->validate(error);
 }
+
+std::vector<Entity*> EntityManager::query(const IEntityQuery& query) const {
+    return query.execute(*this);
+}
