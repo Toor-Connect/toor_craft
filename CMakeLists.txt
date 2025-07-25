@@ -4,15 +4,17 @@ project(toor_craft LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Lua
-find_package(Lua REQUIRED)
-
-if (NOT Lua_FOUND)
-    message(FATAL_ERROR "Lua not found. Please install Lua development libraries.")
+# ✅ Detect Emscripten automatically
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten")
+    message(STATUS "🚀 Building for WebAssembly (Emscripten detected)")
 endif()
 
 include(FetchContent)
 
+set(INJA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(INJA_BUILD_BENCHMARK OFF CACHE BOOL "" FORCE)
+
+# ✅ Fetch Inja (templating library)
 FetchContent_Declare(
     inja
     GIT_REPOSITORY https://github.com/pantor/inja.git
@@ -20,12 +22,25 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(inja)
 
-# Include Lua headers globally
-include_directories(${LUA_INCLUDE_DIR})
+# ✅ Fetch Lua (CMake version)
+FetchContent_Declare(
+    lua
+    GIT_REPOSITORY https://github.com/walterschell/Lua.git
+    GIT_TAG v5.4.5
+)
+FetchContent_MakeAvailable(lua)
+
+# ✅ Lua is now provided as a proper CMake target
+# We don’t need to manually list sources — the repo handles it
+# It will build `lua` static lib by default
+
+# ✅ Global include dirs for all code
 include_directories(${inja_SOURCE_DIR}/single_include)
 include_directories(${inja_SOURCE_DIR}/third_party/include)
 
-# Add the Field library as a subdirectory
+
+# ✅ Add the Field library and other modules
 add_subdirectory(src)
 
+# ✅ Add examples (test/demo executables)
 add_subdirectory(examples)

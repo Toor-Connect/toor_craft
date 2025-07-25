@@ -22,13 +22,13 @@
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2)
-    {
-        std::cerr << "Usage: " << argv[0] << " <lua_base_directory>" << std::endl;
-        return 1;
-    }
-    std::string luaBaseDir = argv[1];
-    LuaManager::instance().setBaseDirectory(luaBaseDir);
+    //if (argc < 2)
+    //{
+    //    std::cerr << "Usage: " << argv[0] << " <lua_base_directory>" << std::endl;
+    //    return 1;
+    //}
+    //std::string luaBaseDir = argv[1];
+    //LuaManager::instance().setBaseDirectory(luaBaseDir);
 
     // Register all schema and value types
     registerFieldSchemaType<StringFieldSchema, StringFieldSchemaConfig>("string");
@@ -138,12 +138,6 @@ int main(int argc, char *argv[])
         print("Entity dict contents:")
         for k, v in pairs(dict) do
             print(k, v)
-        end
-
-        -- Demonstrate generating documentation with this table
-        local ok, err = generateDocumentation("template.txt", "output_doc.txt", dict)
-        if not ok then
-            return false, "Failed to generate documentation: " .. err
         end
 
         -- Write a summary file using writeFile API
