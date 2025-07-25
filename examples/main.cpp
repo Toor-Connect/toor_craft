@@ -33,8 +33,17 @@ public:
     }
 };
 
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc < 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <lua_base_directory>" << std::endl;
+        return 1;
+    }
+    std::string luaBaseDir = argv[1];
+
+    LuaManager::instance().setBaseDirectory(luaBaseDir);
+
     // Register all schema and value types
     registerFieldSchemaType<StringFieldSchema, StringFieldSchemaConfig>("string");
     registerFieldSchemaType<IntegerFieldSchema, IntegerFieldSchemaConfig>("integer");
@@ -144,30 +153,54 @@ int main()
     }
     const char *luaScriptPath = "validate.lua";
 
-    const char *luaScriptContent = R"(
-        -- Lua script expects two arguments: entityId, params (table)
-        local entityId = ...
-        local params = select(2, ...)
+   const char *luaScriptContent = R"(
+    -- Lua script expects two arguments: entityId, params (table)
+    local entityId = ...
+    local params = select(2, ...)
 
-        local name = getField(entityId, "name")
-        local age = getField(entityId, "age")
+    local name = getField(entityId, "name")
+    local age = getField(entityId, "age")
 
-        if not name or name == "" then
-            return false, "Name cannot be empty"
+    if not name or name == "" then
+        return false, "Name cannot be empty"
+    end
+
+    local minAge = tonumber(params["minAge"]) or 0
+    local maxAge = tonumber(params["maxAge"]) or 150
+
+    if age then
+        -- Use C++ regexMatch function to check age is digits only
+        local isNumber = regexMatch("^\\d+$", age)
+        if not isNumber then
+            return false, "Age must be a number: " .. age
         end
 
-        local minAge = tonumber(params["minAge"]) or 0
-        local maxAge = tonumber(params["maxAge"]) or 150
-
-        if age then
-            local ageNum = tonumber(age)
-            if not ageNum or ageNum < minAge or ageNum > maxAge then
-                return false, string.format("Age must be between %d and %d", minAge, maxAge)
-            end
+        local ageNum = tonumber(age)
+        if not ageNum or ageNum < minAge or ageNum > maxAge then
+            return false, string.format("Age must be between %d and %d", minAge, maxAge)
         end
+    end
 
-        return true, ""
-    )";
+    -- Create a table with info
+    local outputTable = {
+        entityId = entityId,
+        name = name,
+        age = age or "N/A"
+    }
+
+    -- Print table contents
+    for k, v in pairs(outputTable) do
+        print(string.format("%s = %s", k, v))
+    end
+
+    local output = string.format("Entity %s: Name=%s, Age=%s\n", entityId, name, age or "N/A")
+    local success, err = writeFile("output.txt", output)
+    if not success then
+        return false, "Failed to write output: " .. err
+    end
+
+    return true, ""
+)";
 
     // Write the Lua script to file
     {
@@ -190,7 +223,7 @@ int main()
     }
 
     std::unordered_map<std::string, std::string> luaParams = {
-        {"minAge", "80"},
+        {"minAge", "0"},
         {"maxAge", "150"}};
 
     bool luaResult = LuaManager::instance().runScript(luaScriptPath, *aliceLua, luaParams, luaError);

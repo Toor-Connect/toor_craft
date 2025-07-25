@@ -10,11 +10,17 @@ extern "C"
 
 #include <iostream>
 #include <unordered_map>
+#include <regex>
+#include <fstream>
+#include <sstream>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 class LuaManager::LuaManagerImpl
 {
 public:
     lua_State *L;
+    fs::path baseDirectory_; // Base dir for relative paths
 
     LuaManagerImpl()
     {
@@ -35,14 +41,28 @@ public:
         }
     }
 
+    void setBaseDirectory(const std::string& baseDir)
+    {
+        baseDirectory_ = fs::path(baseDir);
+    }
+
+    // Resolve a path: if absolute, keep as is; if relative, join with baseDirectory_
+    fs::path resolvePath(const std::string& path)
+    {
+        fs::path p(path);
+        if (p.is_absolute())
+            return p;
+        if (baseDirectory_.empty())
+            throw std::runtime_error("Base directory for LuaManager not set");
+        return baseDirectory_ / p;
+    }
+
     // Lua callable function: getField(entityId, fieldName)
     static int lua_getField(lua_State *L)
     {
-        // Check and get args
         const char *entityId = luaL_checkstring(L, 1);
         const char *fieldName = luaL_checkstring(L, 2);
 
-        // Fetch entity and field value
         Entity *entity = EntityManager::instance().getEntityById(entityId);
         if (!entity)
         {
@@ -57,15 +77,100 @@ public:
             return 1;
         }
 
-        // Push field value string representation to Lua stack
         lua_pushstring(L, fieldValue->toString().c_str());
-        return 1; // Number of return values
+        return 1;
+    }
+
+    static int lua_regexMatch(lua_State *L)
+    {
+        const char *pattern = luaL_checkstring(L, 1);
+        const char *input = luaL_checkstring(L, 2);
+
+        try
+        {
+            std::regex re(pattern);
+            bool matched = std::regex_match(input, re);
+            lua_pushboolean(L, matched);
+        }
+        catch (const std::regex_error &)
+        {
+            lua_pushboolean(L, false);
+        }
+
+        return 1;
+    }
+
+    static int lua_writeFile(lua_State *L)
+    {
+        const char *filepath = luaL_checkstring(L, 1);
+        const char *content = luaL_checkstring(L, 2);
+
+        LuaManager& manager = LuaManager::instance();
+
+        try
+        {
+            fs::path fullPath = manager.impl_->resolvePath(filepath);
+
+            std::ofstream ofs(fullPath);
+            if (!ofs)
+            {
+                lua_pushboolean(L, false);
+                lua_pushstring(L, "Failed to open file for writing");
+                return 2;
+            }
+            ofs << content;
+            ofs.close();
+
+            lua_pushboolean(L, true);
+            lua_pushstring(L, "");
+            return 2;
+        }
+        catch (const std::exception& e)
+        {
+            lua_pushboolean(L, false);
+            lua_pushstring(L, e.what());
+            return 2;
+        }
+    }
+
+    static int lua_readFile(lua_State *L)
+    {
+        const char *filepath = luaL_checkstring(L, 1);
+        LuaManager& manager = LuaManager::instance();
+
+        try
+        {
+            fs::path fullPath = manager.impl_->resolvePath(filepath);
+
+            std::ifstream ifs(fullPath);
+            if (!ifs)
+            {
+                lua_pushnil(L);
+                lua_pushstring(L, "Failed to open file for reading");
+                return 2;
+            }
+            std::stringstream buffer;
+            buffer << ifs.rdbuf();
+            std::string content = buffer.str();
+
+            lua_pushstring(L, content.c_str());
+            lua_pushstring(L, "");
+            return 2;
+        }
+        catch (const std::exception& e)
+        {
+            lua_pushnil(L);
+            lua_pushstring(L, e.what());
+            return 2;
+        }
     }
 
     void registerLuaFunctions()
     {
-        // Register 'getField' function globally in Lua
         lua_register(L, "getField", lua_getField);
+        lua_register(L, "regexMatch", lua_regexMatch);
+        lua_register(L, "writeFile", lua_writeFile);
+        lua_register(L, "readFile", lua_readFile);
     }
 
     void pushParamsTable(const std::unordered_map<std::string, std::string> &params)
@@ -105,7 +210,7 @@ public:
         pushEntity(entity);
         pushParamsTable(params);
 
-        // We expect the Lua script to return 2 values: boolean success and string error message
+        // Expect Lua script returns (bool success, string error)
         int callStatus = lua_pcall(L, 2, 2, 0);
         if (callStatus != LUA_OK)
         {
@@ -114,18 +219,15 @@ public:
             return false;
         }
 
-        // Now read the two return values from the stack
-        // Stack top is error message (string)
         if (!lua_isstring(L, -1))
         {
             error = "Lua script did not return error message string";
-            lua_pop(L, 2); // Pop both returns
+            lua_pop(L, 2);
             return false;
         }
         error = lua_tostring(L, -1);
         lua_pop(L, 1);
 
-        // Next is boolean success
         if (!lua_isboolean(L, -1))
         {
             error = "Lua script did not return boolean success value";
@@ -146,11 +248,18 @@ LuaManager &LuaManager::instance()
 }
 
 LuaManager::LuaManager()
-    : impl_(new LuaManagerImpl()) {}
+    : impl_(new LuaManagerImpl())
+{
+}
 
 LuaManager::~LuaManager()
 {
     delete impl_;
+}
+
+void LuaManager::setBaseDirectory(const std::string &baseDir)
+{
+    impl_->setBaseDirectory(baseDir);
 }
 
 bool LuaManager::runScript(const std::string &scriptPath, Entity &entity,
