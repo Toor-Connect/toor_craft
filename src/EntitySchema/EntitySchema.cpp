@@ -37,3 +37,21 @@ const std::unordered_map<std::string, std::unique_ptr<FieldSchema>> &EntitySchem
 {
     return fields_;
 }
+
+void EntitySchema::addCommand(std::unique_ptr<Command> command)
+{
+    if (!command)
+        return;
+    const std::string &id = command->getId();
+    commands_[id] = std::move(command);
+}
+
+Command *EntitySchema::getCommand(const std::string &commandId) const
+{
+    auto it = commands_.find(commandId);
+    if (it != commands_.end())
+    {
+        return it->second.get();
+    }
+    return nullptr;
+}

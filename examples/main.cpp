@@ -14,6 +14,20 @@
 #include "FieldValueFactory.h"
 #include "EntityManager.h" // Add EntityManager
 
+class FindByIdQuery : public IEntityQuery {
+    std::string id_;
+public:
+    explicit FindByIdQuery(std::string id) : id_(std::move(id)) {}
+
+    std::vector<Entity*> execute(const EntityManager& manager) const override {
+        Entity* e = manager.getEntityById(id_);
+        if (e)
+            return { e };
+        return {};
+    }
+};
+
+
 int main()
 {
     // Register all schema and value types
@@ -108,6 +122,21 @@ int main()
     auto managerValue = EntityManager::instance().getFieldValue("1", "managerId");
     if (managerValue)
         std::cout << "Manager ID: " << managerValue->toString() << std::endl;
+
+    // Query for Alice by ID
+    FindByIdQuery query("3");
+    auto results = EntityManager::instance().query(query);
+    if (!results.empty())
+    {
+        std::cout << "Found entity with ID 1: " << results[0]->getSchema().getName() << std::endl;
+        auto fieldValue = results[0]->getFieldValue("name");
+        if (fieldValue)
+            std::cout << "Name: " << fieldValue->toString() << std::endl;
+    }   
+    else
+    {
+        std::cout << "Entity with ID 1 not found." << std::endl;
+    }
 
     return 0;
 }

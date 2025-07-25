@@ -6,6 +6,8 @@
 #include "EntitySchema.h"
 #include "FieldValue.h"
 
+class EntitySchema; // Forward declaration
+
 class Entity {
 public:
     explicit Entity(const EntitySchema& schema);
