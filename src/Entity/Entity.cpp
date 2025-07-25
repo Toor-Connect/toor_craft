@@ -57,3 +57,13 @@ void Entity::setParentId(const std::string& parentId) {
 const std::string& Entity::getParentId() const {
     return _parentId;
 }
+
+std::unordered_map<std::string, std::string> Entity::getDict() const
+{
+    std::unordered_map<std::string, std::string> dict;
+    for (const auto& [key, valuePtr] : fieldValues_)
+    {
+        dict[key] = valuePtr->toString();
+    }
+    return dict;
+}

@@ -30,6 +30,8 @@ public:
     void setParentId(const std::string& parentId);
     const std::string& getParentId() const;
 
+    std::unordered_map<std::string, std::string> getDict() const;
+
 private:
     const EntitySchema& schema_;
     std::unordered_map<std::string, std::unique_ptr<FieldValue>> fieldValues_;

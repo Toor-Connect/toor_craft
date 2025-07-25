@@ -1,37 +1,24 @@
 #include <iostream>
+#include <fstream>
+#include <string>
 #include <memory>
+#include <utility>
+#include <unordered_map>
+#include <cstdio>
+#include "LuaManager.h"
 #include "Entity.h"
+#include "EntityManager.h"
 #include "EntitySchema.h"
+#include "FieldSchemaFactory.h"
+#include "FieldValueFactory.h"
 #include "StringFieldSchema.h"
 #include "IntegerFieldSchema.h"
 #include "BooleanFieldSchema.h"
-#include "ReferenceFieldSchema.h" // Add ReferenceFieldSchema
+#include "ReferenceFieldSchema.h"
 #include "StringFieldValue.h"
 #include "IntegerFieldValue.h"
 #include "BooleanFieldValue.h"
-#include "ReferenceFieldValue.h" // Add ReferenceFieldValue
-#include "FieldSchemaFactory.h"
-#include "FieldValueFactory.h"
-#include "EntityManager.h" // Add EntityManager
-#include "LuaManager.h"
-#include <fstream>
-#include <cstdio> // for std::remove
-
-class FindByIdQuery : public IEntityQuery
-{
-    std::string id_;
-
-public:
-    explicit FindByIdQuery(std::string id) : id_(std::move(id)) {}
-
-    std::vector<Entity *> execute(const EntityManager &manager) const override
-    {
-        Entity *e = manager.getEntityById(id_);
-        if (e)
-            return {e};
-        return {};
-    }
-};
+#include "ReferenceFieldValue.h"
 
 int main(int argc, char *argv[])
 {
@@ -41,7 +28,6 @@ int main(int argc, char *argv[])
         return 1;
     }
     std::string luaBaseDir = argv[1];
-
     LuaManager::instance().setBaseDirectory(luaBaseDir);
 
     // Register all schema and value types
@@ -70,11 +56,10 @@ int main(int argc, char *argv[])
     activeConfig.name = "active";
     activeConfig.required = false;
 
-    // Create configs for a reference field
     ReferenceFieldSchemaConfig managerConfig;
     managerConfig.name = "managerId";
     managerConfig.required = false;
-    managerConfig.referencedEntityType = "Person"; // Reference to another person
+    managerConfig.referencedEntityType = "Person";
 
     // Create schemas using factory
     auto nameFieldSchema = FieldSchemaFactory::instance().create("string", nameConfig);
@@ -89,6 +74,7 @@ int main(int argc, char *argv[])
     personSchema.addField(std::move(activeFieldSchema));
     personSchema.addField(std::move(managerFieldSchema));
 
+    // Create two people: Alice and Bob
     auto alice = std::make_unique<Entity>(personSchema);
     alice->setId("1");
 
@@ -99,110 +85,77 @@ int main(int argc, char *argv[])
     EntityManager::instance().addEntity(std::move(bob));
     std::string error;
 
-    // Set field values via EntityManager by entity ID
-    if (!EntityManager::instance().setFieldValue("1", "name", "Alice", error))
-        std::cerr << "Error setting Alice's name: " << error << std::endl;
-    if (!EntityManager::instance().setFieldValue("1", "age", "29", error))
-        std::cerr << "Error setting Alice's age: " << error << std::endl;
-    if (!EntityManager::instance().setFieldValue("1", "active", "true", error))
-        std::cerr << "Error setting Alice's active: " << error << std::endl;
+    // Set values
+    EntityManager::instance().setFieldValue("1", "name", "Alice", error);
+    EntityManager::instance().setFieldValue("1", "age", "29", error);
+    EntityManager::instance().setFieldValue("1", "active", "true", error);
 
-    if (!EntityManager::instance().setFieldValue("2", "name", "Bob", error))
-        std::cerr << "Error setting Bob's name: " << error << std::endl;
-    if (!EntityManager::instance().setFieldValue("2", "age", "45", error))
-        std::cerr << "Error setting Bob's age: " << error << std::endl;
-    if (!EntityManager::instance().setFieldValue("2", "active", "true", error))
-        std::cerr << "Error setting Bob's active: " << error << std::endl;
+    EntityManager::instance().setFieldValue("2", "name", "Bob", error);
+    EntityManager::instance().setFieldValue("2", "age", "45", error);
+    EntityManager::instance().setFieldValue("2", "active", "true", error);
 
-    // Bob is Alice's manager (reference field)
-    if (!EntityManager::instance().setFieldValue("1", "managerId", "2", error))
-        std::cerr << "Error setting Alice's managerId: " << error << std::endl;
+    // Bob is Alice's manager
+    EntityManager::instance().setFieldValue("1", "managerId", "2", error);
 
     // Validate Alice entity
     if (!EntityManager::instance().validateEntity("1", error))
-    {
         std::cerr << "Validation failed: " << error << std::endl;
-    }
     else
-    {
         std::cout << "Alice entity is valid!" << std::endl;
-    }
 
-    // Output Alice's info and manager reference
-    auto nameValue = EntityManager::instance().getFieldValue("1", "name");
-    if (nameValue)
-        std::cout << "Name: " << nameValue->toString() << std::endl;
-
-    auto managerValue = EntityManager::instance().getFieldValue("1", "managerId");
-    if (managerValue)
-        std::cout << "Manager ID: " << managerValue->toString() << std::endl;
-
-    // Query for Alice by ID
-    FindByIdQuery query("1");
-    auto results = EntityManager::instance().query(query);
-    if (!results.empty())
-    {
-        std::cout << "Found entity with ID 1: " << results[0]->getSchema().getName() << std::endl;
-        auto fieldValue = results[0]->getFieldValue("name");
-        if (fieldValue)
-            std::cout << "Name: " << fieldValue->toString() << std::endl;
-    }
-    else
-    {
-        std::cout << "Entity with ID 1 not found." << std::endl;
-    }
+    // Write Lua script file
     const char *luaScriptPath = "validate.lua";
+    const char *luaScriptContent = R"(
+        -- Lua script expects two arguments: entityId, params (table)
+               local entityId = ...
+        local params = select(2, ...)
 
-   const char *luaScriptContent = R"(
-    -- Lua script expects two arguments: entityId, params (table)
-    local entityId = ...
-    local params = select(2, ...)
+        local name = getField(entityId, "name")
+        local age = getField(entityId, "age")
 
-    local name = getField(entityId, "name")
-    local age = getField(entityId, "age")
-
-    if not name or name == "" then
-        return false, "Name cannot be empty"
-    end
-
-    local minAge = tonumber(params["minAge"]) or 0
-    local maxAge = tonumber(params["maxAge"]) or 150
-
-    if age then
-        -- Use C++ regexMatch function to check age is digits only
-        local isNumber = regexMatch("^\\d+$", age)
-        if not isNumber then
-            return false, "Age must be a number: " .. age
+        if not name or name == "" then
+            return false, "Name cannot be empty"
         end
 
-        local ageNum = tonumber(age)
-        if not ageNum or ageNum < minAge or ageNum > maxAge then
-            return false, string.format("Age must be between %d and %d", minAge, maxAge)
+        local minAge = tonumber(params["minAge"]) or 0
+        local maxAge = tonumber(params["maxAge"]) or 150
+
+        if age then
+            -- Validate age format using regexMatch
+            local isNumber = regexMatch("^\\d+$", age)
+            if not isNumber then
+                return false, "Age must be a number: " .. age
+            end
+
+            local ageNum = tonumber(age)
+            if not ageNum or ageNum < minAge or ageNum > maxAge then
+                return false, string.format("Age must be between %d and %d", minAge, maxAge)
+            end
         end
-    end
 
-    -- Create a table with info
-    local outputTable = {
-        entityId = entityId,
-        name = name,
-        age = age or "N/A"
-    }
+        -- Get entity dictionary as a Lua table (no JSON decode needed)
+        local dict = getDict(entityId)
+        print("Entity dict contents:")
+        for k, v in pairs(dict) do
+            print(k, v)
+        end
 
-    -- Print table contents
-    for k, v in pairs(outputTable) do
-        print(string.format("%s = %s", k, v))
-    end
+        -- Demonstrate generating documentation with this table
+        local ok, err = generateDocumentation("template.txt", "output_doc.txt", dict)
+        if not ok then
+            return false, "Failed to generate documentation: " .. err
+        end
 
-    local output = string.format("Entity %s: Name=%s, Age=%s\n", entityId, name, age or "N/A")
-    local success, err = writeFile("output.txt", output)
-    if not success then
-        return false, "Failed to write output: " .. err
-    end
+        -- Write a summary file using writeFile API
+        local output = string.format("Entity %s: Name=%s, Age=%s\n", entityId, name, age or "N/A")
+        local success, err = writeFile("output.txt", output)
+        if not success then
+            return false, "Failed to write output: " .. err
+        end
 
-    return true, ""
-)";
+        return true, ""
+    )";
 
-    // Write the Lua script to file
     {
         std::ofstream luaFile(luaScriptPath);
         if (!luaFile)
@@ -211,6 +164,12 @@ int main(int argc, char *argv[])
             return 1;
         }
         luaFile << luaScriptContent;
+    }
+
+    // Create a simple template file for inja to render
+    {
+        std::ofstream templateFile("template.txt");
+        templateFile << "Hello, my name is {{ name }} and I am {{ age }} years old.";
     }
 
     // Run Lua validation on Alice
@@ -237,11 +196,9 @@ int main(int argc, char *argv[])
         std::cout << "Lua validation succeeded." << std::endl;
     }
 
-    // Delete the temporary Lua script file
-    if (std::remove(luaScriptPath) != 0)
-    {
-        std::cerr << "Warning: Could not delete Lua script file." << std::endl;
-    }
+    // Cleanup: remove script and template
+    std::remove(luaScriptPath);
+    std::remove("template.txt");
 
     return 0;
 }
