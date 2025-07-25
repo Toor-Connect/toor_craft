@@ -13,20 +13,25 @@
 #include "FieldSchemaFactory.h"
 #include "FieldValueFactory.h"
 #include "EntityManager.h" // Add EntityManager
+#include "LuaManager.h"
+#include <fstream>
+#include <cstdio> // for std::remove
 
-class FindByIdQuery : public IEntityQuery {
+class FindByIdQuery : public IEntityQuery
+{
     std::string id_;
+
 public:
     explicit FindByIdQuery(std::string id) : id_(std::move(id)) {}
 
-    std::vector<Entity*> execute(const EntityManager& manager) const override {
-        Entity* e = manager.getEntityById(id_);
+    std::vector<Entity *> execute(const EntityManager &manager) const override
+    {
+        Entity *e = manager.getEntityById(id_);
         if (e)
-            return { e };
+            return {e};
         return {};
     }
 };
-
 
 int main()
 {
@@ -124,7 +129,7 @@ int main()
         std::cout << "Manager ID: " << managerValue->toString() << std::endl;
 
     // Query for Alice by ID
-    FindByIdQuery query("3");
+    FindByIdQuery query("1");
     auto results = EntityManager::instance().query(query);
     if (!results.empty())
     {
@@ -132,10 +137,77 @@ int main()
         auto fieldValue = results[0]->getFieldValue("name");
         if (fieldValue)
             std::cout << "Name: " << fieldValue->toString() << std::endl;
-    }   
+    }
     else
     {
         std::cout << "Entity with ID 1 not found." << std::endl;
+    }
+    const char *luaScriptPath = "validate.lua";
+
+    const char *luaScriptContent = R"(
+        -- Lua script expects two arguments: entityId, params (table)
+        local entityId = ...
+        local params = select(2, ...)
+
+        local name = getField(entityId, "name")
+        local age = getField(entityId, "age")
+
+        if not name or name == "" then
+            return false, "Name cannot be empty"
+        end
+
+        local minAge = tonumber(params["minAge"]) or 0
+        local maxAge = tonumber(params["maxAge"]) or 150
+
+        if age then
+            local ageNum = tonumber(age)
+            if not ageNum or ageNum < minAge or ageNum > maxAge then
+                return false, string.format("Age must be between %d and %d", minAge, maxAge)
+            end
+        end
+
+        return true, ""
+    )";
+
+    // Write the Lua script to file
+    {
+        std::ofstream luaFile(luaScriptPath);
+        if (!luaFile)
+        {
+            std::cerr << "Failed to create Lua script file." << std::endl;
+            return 1;
+        }
+        luaFile << luaScriptContent;
+    }
+
+    // Run Lua validation on Alice
+    std::string luaError;
+    Entity *aliceLua = EntityManager::instance().getEntityById("1");
+    if (!aliceLua)
+    {
+        std::cerr << "Alice entity not found." << std::endl;
+        return 1;
+    }
+
+    std::unordered_map<std::string, std::string> luaParams = {
+        {"minAge", "80"},
+        {"maxAge", "150"}};
+
+    bool luaResult = LuaManager::instance().runScript(luaScriptPath, *aliceLua, luaParams, luaError);
+
+    if (!luaResult)
+    {
+        std::cerr << "Lua validation failed: " << luaError << std::endl;
+    }
+    else
+    {
+        std::cout << "Lua validation succeeded." << std::endl;
+    }
+
+    // Delete the temporary Lua script file
+    if (std::remove(luaScriptPath) != 0)
+    {
+        std::cerr << "Warning: Could not delete Lua script file." << std::endl;
     }
 
     return 0;

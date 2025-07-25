@@ -45,6 +45,7 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "typeinfo": "cpp",
-        "charconv": "cpp"
+        "charconv": "cpp",
+        "fstream": "cpp"
     }
 }

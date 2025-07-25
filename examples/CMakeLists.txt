@@ -7,4 +7,5 @@ FieldSchemaLib
 FieldSchemaFactoryLib 
 FieldValueFactoryLib
 EntityManagerLib
+CommandLib
 )
