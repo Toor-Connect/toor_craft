@@ -78,3 +78,27 @@ void EntityManager::clear()
     entities_.clear();
     childrenIndex_.clear();
 }
+
+bool EntityManager::setFieldValue(const std::string& entityId, const std::string& fieldName, const std::string& value, std::string& error) {
+    auto entity = getEntityById(entityId);
+    if (!entity) {
+        error = "Entity not found: " + entityId;
+        return false;
+    }
+    return entity->setFieldValue(fieldName, value, error);
+}
+
+FieldValue* EntityManager::getFieldValue(const std::string& entityId, const std::string& fieldName) {
+    auto entity = getEntityById(entityId);
+    if (!entity) return nullptr;
+    return entity->getFieldValue(fieldName);
+}
+
+bool EntityManager::validateEntity(const std::string& entityId, std::string& error) {
+    auto entity = getEntityById(entityId);
+    if (!entity) {
+        error = "Entity not found: " + entityId;
+        return false;
+    }
+    return entity->validate(error);
+}
