@@ -28,6 +28,7 @@ add_executable(SchemaManagerTests
 )
 
 target_link_libraries(SchemaManagerTests
+    PRIVATE FieldSchemaFactoryLib
     PRIVATE SchemaManagerLib
     PRIVATE yaml-cpp
     PRIVATE Catch2::Catch2WithMain

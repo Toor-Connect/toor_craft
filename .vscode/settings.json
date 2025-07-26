@@ -47,7 +47,11 @@
         "typeinfo": "cpp",
         "charconv": "cpp",
         "fstream": "cpp",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "any": "cpp",
+        "ranges": "cpp",
+        "span": "cpp",
+        "regex": "cpp"
     },
     "editor.formatOnSave": true,
     "cmake.ctest.debugLaunchTarget": "DebugTest",

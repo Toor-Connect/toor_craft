@@ -5,7 +5,14 @@
 #include <unordered_map>
 #include <functional>
 #include <stdexcept>
+
 #include "FieldSchema.h"
+#include "StringFieldSchema.h"
+#include "IntegerFieldSchema.h"
+#include "BooleanFieldSchema.h"
+#include "ReferenceFieldSchema.h"
+#include "EnumFieldSchema.h"
+#include "FloatFieldSchema.h"
 
 class FieldSchemaFactory
 {
@@ -18,6 +25,18 @@ public:
 
     std::unique_ptr<FieldSchema> create(const std::string &typeName, const FieldSchemaConfig &config) const;
 
+    template <typename FieldType, typename ConfigType>
+    void registerFieldSchemaType(const std::string &typeName)
+    {
+        registerType(typeName, [typeName](const FieldSchemaConfig &config)
+                     {
+            auto derivedConfig = dynamic_cast<const ConfigType*>(&config);
+            if (!derivedConfig) {
+                throw std::runtime_error("Invalid config type for " + typeName);
+            }
+            return std::make_unique<FieldType>(*derivedConfig); });
+    }
+
 private:
     std::unordered_map<std::string, CreatorFunc> creators_;
 
@@ -25,16 +44,3 @@ private:
     FieldSchemaFactory(const FieldSchemaFactory &) = delete;
     FieldSchemaFactory &operator=(const FieldSchemaFactory &) = delete;
 };
-
-template <typename FieldType, typename ConfigType>
-void registerFieldSchemaType(const std::string &typeName)
-{
-    FieldSchemaFactory::instance().registerType(typeName, [typeName](const FieldSchemaConfig &config)
-    {
-        auto derivedConfig = dynamic_cast<const ConfigType*>(&config);
-        if (!derivedConfig) {
-            throw std::runtime_error("Invalid config type for " + typeName);
-        }
-        return std::make_unique<FieldType>(*derivedConfig);
-    });
-}

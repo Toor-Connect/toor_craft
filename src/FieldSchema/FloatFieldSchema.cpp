@@ -39,7 +39,10 @@ private:
     std::optional<double> maxValue_;
 };
 
-FloatFieldSchema::FloatFieldSchema(const FloatFieldSchemaConfig& config)
-    : FieldSchema(config) {
+FloatFieldSchema::FloatFieldSchema(const FloatFieldSchemaConfig &config)
+    : FieldSchema(config), // ✅ Base handles name, required, alias
+      minValue_(config.minValue),
+      maxValue_(config.maxValue)
+{
     addRule(std::make_unique<FloatRangeRuleSchema>(config.minValue, config.maxValue));
 }

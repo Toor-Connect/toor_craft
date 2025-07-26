@@ -23,7 +23,8 @@ private:
     std::vector<std::string> allowedValues_;
 };
 
-EnumFieldSchema::EnumFieldSchema(const EnumFieldSchemaConfig& config)
-    : FieldSchema(config) {
+EnumFieldSchema::EnumFieldSchema(const EnumFieldSchemaConfig &config)
+    : FieldSchema(config), allowedValues_(config.allowedValues)
+{
     addRule(std::make_unique<EnumRuleSchema>(config.allowedValues));
 }

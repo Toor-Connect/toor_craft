@@ -30,13 +30,13 @@ public:
     explicit FieldSchema(const FieldSchemaConfig &config)
         : name_(config.name),
           required_(config.required),
-          alias_(config.alias)
+          alias_(config.alias),
+          config_(config)
     {
     }
 
-
-    FieldSchema(const FieldSchema&) = delete;
-    FieldSchema& operator=(const FieldSchema&) = delete;
+    FieldSchema(const FieldSchema &) = delete;
+    FieldSchema &operator=(const FieldSchema &) = delete;
     FieldSchema(FieldSchema &&) = default;
     FieldSchema &operator=(FieldSchema &&) = default;
 
@@ -47,7 +47,7 @@ public:
     bool isRequired() const { return required_; }
     const std::optional<std::string> &getAlias() const { return alias_; }
     virtual std::string getTypeName() const = 0;
-    const FieldSchemaConfig& getConfig() const { return config_; }
+    const FieldSchemaConfig &getConfig() const { return config_; }
 
     // Add a rule to this field
     void addRule(std::unique_ptr<FieldRuleSchema> rule)

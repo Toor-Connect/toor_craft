@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
 #include "SchemaManager.h"
 #include "EntitySchema.h"
+#include "FieldSchemaFactory.h"
 
 TEST_CASE("SchemaManager handles a simple profile and entity")
 {
@@ -9,8 +11,8 @@ TEST_CASE("SchemaManager handles a simple profile and entity")
     schemas["profile.yaml"] = R"(
 profile_name: SmartHome
 children:
-  Device:
-    entity_name: Device
+  devices:
+    entity: Device
 )";
 
     schemas["device.yaml"] = R"(
@@ -22,133 +24,131 @@ entity_name: Device
 
     REQUIRE(mgr.profileExists("SmartHome"));
     REQUIRE(mgr.getEntity("Device") != nullptr);
-    REQUIRE(mgr.getProfile("SmartHome")->getChildrenNames().size() == 1);
+
+    auto childTags = mgr.getProfile("SmartHome")->getChildrenTags();
+    REQUIRE(childTags.size() == 1);
+    REQUIRE(childTags[0] == "devices");
 }
 
-TEST_CASE("SchemaManager handles deep hierarchies and multiple profiles")
+TEST_CASE("SchemaManager handles all field types and extra params")
 {
     std::unordered_map<std::string, std::string> schemas;
 
-    // Profile 1
-    schemas["factory.yaml"] = R"(
-profile_name: FactoryProfile
-fields:
-  - name: id
-    type: string
-children:
-  Line:
-    entity_name: Line
-  Worker:
-    entity_name: Worker
-)";
-
-    // Profile 2
-    schemas["office.yaml"] = R"(
-profile_name: OfficeProfile
-children:
-  Desk:
-    entity_name: Desk
-)";
-
-    // Entities for FactoryProfile
-    schemas["line.yaml"] = R"(
-entity_name: Line
-children:
-  Machine:
-    entity_name: Machine
-)";
-
-    schemas["worker.yaml"] = R"(
-entity_name: Worker
+    schemas["profile.yaml"] = R"(
+profile_name: FieldProfile
 fields:
   - name: name
     type: string
-)";
-
-    schemas["machine.yaml"] = R"(
-entity_name: Machine
+    alias: full_name
+  - name: active
+    type: boolean
+    required: true
+  - name: age
+    type: integer
+    min: 0
+    max: 120
+  - name: temperature
+    type: float
+    min: -50.5
+    max: 150.75
+  - name: role
+    type: enum
+    values:
+      - admin
+      - user
+      - guest
+  - name: device_ref
+    type: reference
+    target: Device
 children:
-  Sensor:
-    entity_name: Sensor
+  devices:
+    entity: Device
 )";
 
-    schemas["sensor.yaml"] = R"(
-entity_name: Sensor
-fields:
-  - name: serial
-    type: string
-)";
-
-    // Entities for OfficeProfile
-    schemas["desk.yaml"] = R"(
-entity_name: Desk
-children:
-  PC:
-    entity_name: PC
-)";
-
-    schemas["pc.yaml"] = R"(
-entity_name: PC
+    schemas["device.yaml"] = R"(
+entity_name: Device
 )";
 
     SchemaManager &mgr = SchemaManager::instance();
     mgr.parseSchemaBundle(schemas);
 
-    SECTION("Profiles are correctly registered")
-    {
-        REQUIRE(mgr.profileExists("FactoryProfile"));
-        REQUIRE(mgr.profileExists("OfficeProfile"));
+    auto profile = mgr.getProfile("FieldProfile");
+    REQUIRE(profile != nullptr);
 
-        REQUIRE(mgr.getProfileNames().size() == 2);
+    SECTION("String field is parsed correctly")
+    {
+        auto field = profile->getField("name");
+        REQUIRE(field != nullptr);
+
+        auto stringField = dynamic_cast<const StringFieldSchema *>(field);
+        REQUIRE(stringField != nullptr);
+        REQUIRE(stringField->getName() == "name");
+        REQUIRE(field->getAlias().has_value());
+        REQUIRE(field->getAlias().value() == "full_name");
     }
 
-    SECTION("All entities exist in the global lookup")
+    SECTION("Boolean field is parsed correctly")
     {
-        auto names = mgr.getEntityNames();
-        REQUIRE(names.size() == schemas.size()); // every YAML file produced one entity
-        REQUIRE(mgr.getEntity("Machine") != nullptr);
-        REQUIRE(mgr.getEntity("PC") != nullptr);
+        auto field = profile->getField("active");
+        REQUIRE(field != nullptr);
+
+        auto boolField = dynamic_cast<const BooleanFieldSchema *>(field);
+        REQUIRE(boolField != nullptr);
+        REQUIRE(boolField->getName() == "active");
+        REQUIRE(field->isRequired() == true);
     }
 
-    SECTION("Hierarchy linking is correct for FactoryProfile")
+    SECTION("Integer field with min/max")
     {
-        auto factory = mgr.getProfile("FactoryProfile");
+        auto field = profile->getField("age");
+        REQUIRE(field != nullptr);
 
-        // Check children of FactoryProfile
-        auto topChildren = factory->getChildrenNames();
-        REQUIRE(topChildren.size() == 2);
-        REQUIRE(std::find(topChildren.begin(), topChildren.end(), "Line") != topChildren.end());
-        REQUIRE(std::find(topChildren.begin(), topChildren.end(), "Worker") != topChildren.end());
-
-        // Check nested hierarchy: FactoryProfile -> Line -> Machine -> Sensor
-        auto line = factory->getChildSchema("Line");
-        REQUIRE(line != nullptr);
-        auto lineChildren = line->getChildrenNames();
-        REQUIRE(lineChildren.size() == 1);
-        REQUIRE(lineChildren[0] == "Machine");
-
-        auto machine = line->getChildSchema("Machine");
-        REQUIRE(machine != nullptr);
-        auto machineChildren = machine->getChildrenNames();
-        REQUIRE(machineChildren.size() == 1);
-        REQUIRE(machineChildren[0] == "Sensor");
-
-        auto sensor = machine->getChildSchema("Sensor");
-        REQUIRE(sensor != nullptr);
-        REQUIRE(sensor->getFields().size() == 1);
+        auto intField = dynamic_cast<const IntegerFieldSchema *>(field);
+        REQUIRE(intField != nullptr);
+        REQUIRE(intField->getName() == "age");
+        REQUIRE(intField->getMinValue().has_value());
+        REQUIRE(intField->getMaxValue().has_value());
+        REQUIRE(intField->getMinValue().value() == 0);
+        REQUIRE(intField->getMaxValue().value() == 120);
     }
 
-    SECTION("Hierarchy linking is correct for OfficeProfile")
+    SECTION("Float field with min/max")
     {
-        auto office = mgr.getProfile("OfficeProfile");
-        auto officeChildren = office->getChildrenNames();
-        REQUIRE(officeChildren.size() == 1);
-        REQUIRE(officeChildren[0] == "Desk");
+        auto field = profile->getField("temperature");
+        REQUIRE(field != nullptr);
 
-        auto desk = office->getChildSchema("Desk");
-        REQUIRE(desk != nullptr);
-        REQUIRE(desk->getChildrenNames().size() == 1);
-        REQUIRE(desk->getChildSchema("PC") != nullptr);
+        auto floatField = dynamic_cast<const FloatFieldSchema *>(field);
+        REQUIRE(floatField != nullptr);
+        REQUIRE(floatField->getName() == "temperature");
+        REQUIRE(floatField->getMinValue().has_value());
+        REQUIRE(floatField->getMaxValue().has_value());
+        REQUIRE(floatField->getMinValue().value() == Catch::Approx(-50.5));
+        REQUIRE(floatField->getMaxValue().value() == Catch::Approx(150.75));
+    }
+
+    SECTION("Enum field with values")
+    {
+        auto field = profile->getField("role");
+        REQUIRE(field != nullptr);
+
+        auto enumField = dynamic_cast<const EnumFieldSchema *>(field);
+        REQUIRE(enumField != nullptr);
+        REQUIRE(enumField->getName() == "role");
+        REQUIRE(enumField->getAllowedValues().size() == 3);
+        REQUIRE(enumField->getAllowedValues()[0] == "admin");
+        REQUIRE(enumField->getAllowedValues()[1] == "user");
+        REQUIRE(enumField->getAllowedValues()[2] == "guest");
+    }
+
+    SECTION("Reference field points to correct target")
+    {
+        auto field = profile->getField("device_ref");
+        REQUIRE(field != nullptr);
+
+        auto refField = dynamic_cast<const ReferenceFieldSchema *>(field);
+        REQUIRE(refField != nullptr);
+        REQUIRE(refField->getName() == "device_ref");
+        REQUIRE(refField->getTargetEntityName() == "Device");
     }
 }
 
@@ -156,24 +156,19 @@ TEST_CASE("SchemaManager throws when schema is invalid")
 {
     std::unordered_map<std::string, std::string> badSchemas;
 
-    // Missing profile_name and entity_name
     badSchemas["broken.yaml"] = R"(
 name: Invalid
 )";
 
     SchemaManager &mgr = SchemaManager::instance();
-
     REQUIRE_THROWS_AS(mgr.parseSchemaBundle(badSchemas), std::runtime_error);
 
-    // Dangling child reference
     std::unordered_map<std::string, std::string> danglingSchemas;
     danglingSchemas["profile.yaml"] = R"(
 profile_name: BrokenProfile
 children:
-  MissingChild:
-    entity_name: MissingChild
+  missing_children:
+    entity: MissingChild
 )";
-    // No file for MissingChild
-
     REQUIRE_THROWS_AS(mgr.parseSchemaBundle(danglingSchemas), std::runtime_error);
 }

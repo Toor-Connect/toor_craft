@@ -1,5 +1,4 @@
 #include "EntitySchema.h"
-#include <stdexcept>
 
 EntitySchema::EntitySchema(std::string name)
     : name_(std::move(name)) {}
@@ -17,47 +16,35 @@ void EntitySchema::addField(std::unique_ptr<FieldSchema> field)
 const FieldSchema *EntitySchema::getField(const std::string &fieldName) const
 {
     auto it = fields_.find(fieldName);
-    if (it != fields_.end())
-    {
-        return it->second.get();
-    }
-    return nullptr;
+    return it != fields_.end() ? it->second.get() : nullptr;
 }
 
-// ✅ now takes a raw pointer (SchemaManager owns it)
-void EntitySchema::addChildSchema(const std::string &name, EntitySchema *child)
+void EntitySchema::addChildSchema(const std::string &relationTag, EntitySchema *child)
 {
     if (!child)
         return;
-
-    if (children_.find(name) != children_.end())
+    if (children_.find(relationTag) != children_.end())
     {
-        throw std::runtime_error(
-            "Child schema with name '" + name + "' already exists in entity '" + name_ + "'");
+        throw std::runtime_error("Child relation '" + relationTag + "' already exists in entity '" + name_ + "'");
     }
-    children_[name] = child;
+    children_[relationTag] = ChildRelation{relationTag, child};
 }
 
-std::vector<std::string> EntitySchema::getChildrenNames() const
+std::vector<std::string> EntitySchema::getChildrenTags() const
 {
-    std::vector<std::string> names;
-    names.reserve(children_.size());
+    std::vector<std::string> tags;
+    tags.reserve(children_.size());
     for (const auto &pair : children_)
     {
-        names.push_back(pair.first);
+        tags.push_back(pair.first);
     }
-    return names;
+    return tags;
 }
 
-// ✅ return raw pointer instead of unique_ptr
-EntitySchema *EntitySchema::getChildSchema(const std::string &name) const
+EntitySchema *EntitySchema::getChildSchema(const std::string &relationTag) const
 {
-    auto it = children_.find(name);
-    if (it != children_.end())
-    {
-        return it->second;
-    }
-    return nullptr;
+    auto it = children_.find(relationTag);
+    return it != children_.end() ? it->second.schema : nullptr;
 }
 
 const std::unordered_map<std::string, std::unique_ptr<FieldSchema>> &EntitySchema::getFields() const
@@ -69,16 +56,11 @@ void EntitySchema::addCommand(std::unique_ptr<Command> command)
 {
     if (!command)
         return;
-    const std::string &id = command->getId();
-    commands_[id] = std::move(command);
+    commands_[command->getId()] = std::move(command);
 }
 
 Command *EntitySchema::getCommand(const std::string &commandId) const
 {
     auto it = commands_.find(commandId);
-    if (it != commands_.end())
-    {
-        return it->second.get();
-    }
-    return nullptr;
+    return it != commands_.end() ? it->second.get() : nullptr;
 }

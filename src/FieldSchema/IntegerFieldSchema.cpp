@@ -45,7 +45,10 @@ private:
     std::optional<int64_t> maxValue_;
 };
 
-IntegerFieldSchema::IntegerFieldSchema(const IntegerFieldSchemaConfig& config)
-    : FieldSchema(config) {
+IntegerFieldSchema::IntegerFieldSchema(const IntegerFieldSchemaConfig &config)
+    : FieldSchema(config), // ✅ Base handles name, required, alias
+      minValue_(config.minValue),
+      maxValue_(config.maxValue)
+{
     addRule(std::make_unique<IntegerRangeRuleSchema>(config.minValue, config.maxValue));
 }

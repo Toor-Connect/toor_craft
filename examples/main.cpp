@@ -22,19 +22,15 @@
 
 int main(int argc, char *argv[])
 {
-    //if (argc < 2)
+    // if (argc < 2)
     //{
-    //    std::cerr << "Usage: " << argv[0] << " <lua_base_directory>" << std::endl;
-    //    return 1;
-    //}
-    //std::string luaBaseDir = argv[1];
-    //LuaManager::instance().setBaseDirectory(luaBaseDir);
+    //     std::cerr << "Usage: " << argv[0] << " <lua_base_directory>" << std::endl;
+    //     return 1;
+    // }
+    // std::string luaBaseDir = argv[1];
+    // LuaManager::instance().setBaseDirectory(luaBaseDir);
 
     // Register all schema and value types
-    registerFieldSchemaType<StringFieldSchema, StringFieldSchemaConfig>("string");
-    registerFieldSchemaType<IntegerFieldSchema, IntegerFieldSchemaConfig>("integer");
-    registerFieldSchemaType<BooleanFieldSchema, BooleanFieldSchemaConfig>("boolean");
-    registerFieldSchemaType<ReferenceFieldSchema, ReferenceFieldSchemaConfig>("reference");
 
     registerFieldValueType<StringFieldValue, StringFieldSchema>("string");
     registerFieldValueType<IntegerFieldValue, IntegerFieldSchema>("integer");
