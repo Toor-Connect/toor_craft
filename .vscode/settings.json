@@ -48,5 +48,29 @@
         "charconv": "cpp",
         "fstream": "cpp",
         "sstream": "cpp"
+    },
+    "editor.formatOnSave": true,
+    "cmake.ctest.debugLaunchTarget": "DebugTest",
+    "cmake.options.advanced": {
+        "build": {
+            "statusBarVisibility": "inherit",
+            "inheritDefault": "visible"
+        },
+        "launch": {
+            "statusBarVisibility": "inherit",
+            "inheritDefault": "visible"
+        },
+        "debug": {
+            "statusBarVisibility": "inherit",
+            "inheritDefault": "visible"
+        },
+        "buildTarget": {
+            "statusBarVisibility": "inherit",
+            "inheritDefault": "visible"
+        },
+        "launchTarget": {
+            "statusBarVisibility": "inherit",
+            "inheritDefault": "visible"
+        }
     }
 }

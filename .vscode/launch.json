@@ -1,17 +1,18 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "DebugTarget",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/examples/example_app",
-            "args": ["$PWD"],
-            "stopAtEntry": true,
-            "cwd": "${fileDirname}",
+            // 🔥 Dynamically uses the selected target
+            "program": "${command:cmake.launchTargetPath}",
+            // Optional arguments to pass to the target
+            "args": [],
+            // Stops at main (optional)
+            "stopAtEntry": false,
+            // Sets working directory to project root (or change if needed)
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
@@ -26,9 +27,37 @@
                     "text": "-gdb-set disassembly-flavor intel",
                     "ignoreFailures": true
                 }
+            ]
+        },
+        {
+            "name": "DebugTest",
+            "type": "cppdbg",
+            "request": "launch",
+            // 🔥 Dynamically uses the selected target
+            "program": "${cmake.testProgram}",
+            // Optional arguments to pass to the target
+            "args": [
+                "${cmake.testArgs}"
             ],
-            ""
+            // Stops at main (optional)
+            "stopAtEntry": false,
+            // Sets working directory to project root (or change if needed)
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
         }
-
     ]
 }
