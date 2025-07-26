@@ -12,6 +12,7 @@ endif()
 include(FetchContent)
 
 # ✅ Enable CTest (for test discovery)
+set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
 include(CTest)
 
 set(INJA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
