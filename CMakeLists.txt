@@ -11,8 +11,12 @@ endif()
 
 include(FetchContent)
 
+# ✅ Enable CTest (for test discovery)
+include(CTest)
+
 set(INJA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(INJA_BUILD_BENCHMARK OFF CACHE BOOL "" FORCE)
+set(LUA_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
 
 # ✅ Fetch Inja (templating library)
 FetchContent_Declare(
@@ -29,6 +33,25 @@ FetchContent_Declare(
     GIT_TAG v5.4.5
 )
 FetchContent_MakeAvailable(lua)
+
+
+FetchContent_Declare(
+    yaml-cpp
+    GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+    GIT_TAG 0.8.0
+)
+
+FetchContent_MakeAvailable(yaml-cpp)
+
+
+# 🔽 Fetch Catch2
+FetchContent_Declare(
+  catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG v3.4.0 # (or latest stable)
+)
+
+FetchContent_MakeAvailable(catch2)
 
 # ✅ Lua is now provided as a proper CMake target
 # We don’t need to manually list sources — the repo handles it

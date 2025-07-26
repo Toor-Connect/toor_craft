@@ -1,4 +1,5 @@
 #include "EntitySchema.h"
+#include <stdexcept>
 
 EntitySchema::EntitySchema(std::string name)
     : name_(std::move(name)) {}
@@ -23,14 +24,40 @@ const FieldSchema *EntitySchema::getField(const std::string &fieldName) const
     return nullptr;
 }
 
-void EntitySchema::addChildSchema(std::unique_ptr<EntitySchema> child)
+// ✅ now takes a raw pointer (SchemaManager owns it)
+void EntitySchema::addChildSchema(const std::string &name, EntitySchema *child)
 {
-    children_.push_back(std::move(child));
+    if (!child)
+        return;
+
+    if (children_.find(name) != children_.end())
+    {
+        throw std::runtime_error(
+            "Child schema with name '" + name + "' already exists in entity '" + name_ + "'");
+    }
+    children_[name] = child;
 }
 
-const std::vector<std::unique_ptr<EntitySchema>> &EntitySchema::getChildren() const
+std::vector<std::string> EntitySchema::getChildrenNames() const
 {
-    return children_;
+    std::vector<std::string> names;
+    names.reserve(children_.size());
+    for (const auto &pair : children_)
+    {
+        names.push_back(pair.first);
+    }
+    return names;
+}
+
+// ✅ return raw pointer instead of unique_ptr
+EntitySchema *EntitySchema::getChildSchema(const std::string &name) const
+{
+    auto it = children_.find(name);
+    if (it != children_.end())
+    {
+        return it->second;
+    }
+    return nullptr;
 }
 
 const std::unordered_map<std::string, std::unique_ptr<FieldSchema>> &EntitySchema::getFields() const
