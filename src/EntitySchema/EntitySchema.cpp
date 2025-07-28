@@ -23,11 +23,7 @@ void EntitySchema::addChildSchema(const std::string &relationTag, EntitySchema *
 {
     if (!child)
         return;
-    if (children_.find(relationTag) != children_.end())
-    {
-        throw std::runtime_error("Child relation '" + relationTag + "' already exists in entity '" + name_ + "'");
-    }
-    children_[relationTag] = ChildRelation{relationTag, child};
+    children_[relationTag] = child;
 }
 
 std::vector<std::string> EntitySchema::getChildrenTags() const
@@ -44,7 +40,7 @@ std::vector<std::string> EntitySchema::getChildrenTags() const
 EntitySchema *EntitySchema::getChildSchema(const std::string &relationTag) const
 {
     auto it = children_.find(relationTag);
-    return it != children_.end() ? it->second.schema : nullptr;
+    return it != children_.end() ? it->second : nullptr;
 }
 
 const std::unordered_map<std::string, std::unique_ptr<FieldSchema>> &EntitySchema::getFields() const
@@ -63,4 +59,20 @@ Command *EntitySchema::getCommand(const std::string &commandId) const
 {
     auto it = commands_.find(commandId);
     return it != commands_.end() ? it->second.get() : nullptr;
+}
+
+const std::unordered_map<std::string, std::unique_ptr<Command>> &EntitySchema::getCommands() const
+{
+    return commands_;
+}
+
+std::vector<std::string> EntitySchema::getCommandNames() const
+{
+    std::vector<std::string> names;
+    names.reserve(commands_.size());
+    for (const auto &pair : commands_)
+    {
+        names.push_back(pair.first);
+    }
+    return names;
 }
