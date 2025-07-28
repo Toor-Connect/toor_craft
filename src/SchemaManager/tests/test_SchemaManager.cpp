@@ -9,6 +9,8 @@
 #include "BooleanFieldSchema.h"
 #include "ReferenceFieldSchema.h"
 #include "StringFieldSchema.h"
+#include "ObjectFieldSchema.h"
+#include "ArrayFieldSchema.h"
 
 TEST_CASE("SchemaManager handles a simple profile and entity")
 {
@@ -36,7 +38,7 @@ entity_name: Device
   REQUIRE(childTags[0] == "devices");
 }
 
-TEST_CASE("SchemaManager handles all field types and extra params")
+TEST_CASE("SchemaManager handles all field types including object and array")
 {
   std::unordered_map<std::string, std::string> schemas;
 
@@ -66,6 +68,28 @@ fields:
   - name: device_ref
     type: reference
     target: Device
+  - name: settings
+    type: object
+    fields:
+      volume:
+        type: integer
+        min: 0
+        max: 100
+      mode:
+        type: string
+  - name: tags
+    type: array
+    element:
+      type: string
+  - name: sensors
+    type: array
+    element:
+      type: object
+      fields:
+        id:
+          type: string
+        value:
+          type: float
 children:
   devices:
     entity: Device
@@ -156,6 +180,56 @@ entity_name: Device
     REQUIRE(refField->getName() == "device_ref");
     REQUIRE(refField->getTargetEntityName() == "Device");
   }
+
+  SECTION("Object field is parsed correctly")
+  {
+    auto field = profile->getField("settings");
+    REQUIRE(field != nullptr);
+
+    auto objField = dynamic_cast<const ObjectFieldSchema *>(field);
+    REQUIRE(objField != nullptr);
+    REQUIRE(objField->getName() == "settings");
+
+    // ✅ Check inner fields
+    auto innerField = objField->getField("volume");
+    REQUIRE(innerField != nullptr);
+    REQUIRE(dynamic_cast<const IntegerFieldSchema *>(innerField) != nullptr);
+  }
+
+  SECTION("Array of strings is parsed correctly")
+  {
+    auto field = profile->getField("tags");
+    REQUIRE(field != nullptr);
+
+    auto arrField = dynamic_cast<const ArrayFieldSchema *>(field);
+    REQUIRE(arrField != nullptr);
+    REQUIRE(arrField->getName() == "tags");
+
+    // ✅ Verify element type is string
+    auto &elemSchema = arrField->getElementSchema();
+    REQUIRE(elemSchema.getTypeName() == "string");
+  }
+
+  SECTION("Array of objects is parsed correctly")
+  {
+    auto field = profile->getField("sensors");
+    REQUIRE(field != nullptr);
+
+    auto arrField = dynamic_cast<const ArrayFieldSchema *>(field);
+    REQUIRE(arrField != nullptr);
+    REQUIRE(arrField->getName() == "sensors");
+
+    // ✅ Element should be an object field
+    auto &elemSchema = arrField->getElementSchema();
+    REQUIRE(elemSchema.getTypeName() == "object");
+
+    const ObjectFieldSchema *objElem = dynamic_cast<const ObjectFieldSchema *>(&elemSchema);
+    REQUIRE(objElem != nullptr);
+
+    // ✅ Check that object fields exist inside the array element
+    REQUIRE(objElem->getField("id") != nullptr);
+    REQUIRE(objElem->getField("value") != nullptr);
+  }
 }
 
 TEST_CASE("SchemaManager throws when schema is invalid")
@@ -190,7 +264,6 @@ TEST_CASE("FieldSchemaFactory direct creation with rvalues")
     cfg.minValue = 1;
     cfg.maxValue = 99;
 
-    // ✅ Move config into create
     auto field = factory.create("integer", std::move(cfg));
 
     auto intField = dynamic_cast<IntegerFieldSchema *>(field.get());
