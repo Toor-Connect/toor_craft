@@ -5,11 +5,14 @@
 #include <stdexcept>
 #include <unordered_set>
 #include <optional>
+// TO DO! Create a command factory
+#include "LuaCommand.h"
 
 static std::unique_ptr<FieldSchema> buildFieldFromNode(const YAML::Node &fieldNode);
 static std::unique_ptr<FieldSchema> buildPrimitiveField(const std::string &type, const YAML::Node &fieldNode, const std::string &name);
 static std::unique_ptr<FieldSchema> buildObjectField(const YAML::Node &fieldNode, const std::string &name);
 static std::unique_ptr<FieldSchema> buildArrayField(const YAML::Node &fieldNode, const std::string &name);
+static void parseCommands(EntitySchema *entity, const YAML::Node &commandsNode);
 
 SchemaManager &SchemaManager::instance()
 {
@@ -77,6 +80,43 @@ ConfigType buildConfig(const YAML::Node &fieldNode, const std::string &name)
                        : std::make_optional(name);
 
     return std::move(config);
+}
+
+static void parseCommands(EntitySchema *entity, const YAML::Node &commandsNode)
+{
+    for (auto it = commandsNode.begin(); it != commandsNode.end(); ++it)
+    {
+        std::string cmdName = it->first.as<std::string>();
+        YAML::Node cmdNode = it->second;
+
+        if (!cmdNode["file"])
+        {
+            throw std::runtime_error("Command '" + cmdName + "' is missing required 'file' key.");
+        }
+
+        std::string scriptFile = cmdNode["file"].as<std::string>();
+
+        std::unordered_map<std::string, std::string> params;
+        if (cmdNode["params"])
+        {
+            if (!cmdNode["params"].IsMap())
+            {
+                throw std::runtime_error("Command '" + cmdName + "' has 'params' but it's not a map.");
+            }
+            for (auto pit = cmdNode["params"].begin(); pit != cmdNode["params"].end(); ++pit)
+            {
+                params[pit->first.as<std::string>()] = pit->second.as<std::string>();
+            }
+        }
+
+        LuaCommandConfig config;
+        config.id = cmdName;
+        config.type = "lua"; // we mark all as lua for now
+        config.scriptPath = scriptFile;
+        config.params = params;
+        auto luaCmd = std::make_unique<LuaCommand>(std::move(config));
+        entity->addCommand(std::move(luaCmd));
+    }
 }
 
 static std::unique_ptr<FieldSchema> buildPrimitiveField(const std::string &type, const YAML::Node &fieldNode, const std::string &name)
@@ -218,8 +258,6 @@ static std::unique_ptr<FieldSchema> buildFieldFromNode(const YAML::Node &fieldNo
 void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std::string> &schemaContent)
 {
     clear();
-
-    // --- PASS 1: Validate and register all entities ---
     for (const auto &pair : schemaContent)
     {
         const std::string &fileName = pair.first;
@@ -255,6 +293,12 @@ void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std:
         {
             throw std::runtime_error(
                 "In file '" + fileName + "', 'children' must be a YAML map.");
+        }
+
+        if (node["commands"] && !node["commands"].IsMap())
+        {
+            throw std::runtime_error(
+                "In file '" + fileName + "', 'commands' must be a YAML map.");
         }
 
         std::string name;
@@ -345,6 +389,11 @@ void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std:
 
                 entity->addChildSchema(relationTag, childIt->second);
             }
+        }
+
+        if (node["commands"])
+        {
+            parseCommands(entity, node["commands"]);
         }
     }
 }
