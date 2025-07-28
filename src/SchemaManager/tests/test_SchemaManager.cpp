@@ -273,3 +273,81 @@ TEST_CASE("FieldSchemaFactory direct creation with rvalues")
     REQUIRE(intField->getMaxValue().has_value());
   }
 }
+
+TEST_CASE("SchemaManager handles deeply nested arrays and objects")
+{
+  std::unordered_map<std::string, std::string> schemas;
+
+  schemas["profile.yaml"] = R"(
+profile_name: DeepNestProfile
+fields:
+  - name: complex_array
+    type: array
+    element:
+      type: object
+      fields:
+        level1_name:
+          type: string
+        level1_array:
+          type: array
+          element:
+            type: object
+            fields:
+              level2_id:
+                type: integer
+              level2_tags:
+                type: array
+                element:
+                  type: string
+)";
+
+  SchemaManager &mgr = SchemaManager::instance();
+  mgr.parseSchemaBundle(schemas);
+
+  auto profile = mgr.getProfile("DeepNestProfile");
+  REQUIRE(profile != nullptr);
+
+  // ✅ Check the top-level array
+  auto complexArray = profile->getField("complex_array");
+  REQUIRE(complexArray != nullptr);
+  auto arrField = dynamic_cast<const ArrayFieldSchema *>(complexArray);
+  REQUIRE(arrField != nullptr);
+
+  // ✅ Array element must be an object
+  auto &level1Schema = arrField->getElementSchema();
+  REQUIRE(level1Schema.getTypeName() == "object");
+
+  auto level1Obj = dynamic_cast<const ObjectFieldSchema *>(&level1Schema);
+  REQUIRE(level1Obj != nullptr);
+
+  // ✅ Object must have "level1_name" (string) and "level1_array" (array)
+  auto level1Name = level1Obj->getField("level1_name");
+  REQUIRE(level1Name != nullptr);
+  REQUIRE(level1Name->getTypeName() == "string");
+
+  auto level1ArrayField = level1Obj->getField("level1_array");
+  REQUIRE(level1ArrayField != nullptr);
+  auto level1Array = dynamic_cast<const ArrayFieldSchema *>(level1ArrayField);
+  REQUIRE(level1Array != nullptr);
+
+  // ✅ Dive into array of objects (Level 2)
+  auto &level2Schema = level1Array->getElementSchema();
+  REQUIRE(level2Schema.getTypeName() == "object");
+
+  auto level2Obj = dynamic_cast<const ObjectFieldSchema *>(&level2Schema);
+  REQUIRE(level2Obj != nullptr);
+
+  // ✅ Level 2 object must have integer + array of strings
+  auto level2Id = level2Obj->getField("level2_id");
+  REQUIRE(level2Id != nullptr);
+  REQUIRE(level2Id->getTypeName() == "integer");
+
+  auto level2TagsField = level2Obj->getField("level2_tags");
+  REQUIRE(level2TagsField != nullptr);
+  auto level2TagsArray = dynamic_cast<const ArrayFieldSchema *>(level2TagsField);
+  REQUIRE(level2TagsArray != nullptr);
+
+  // ✅ Final check: array element type should be string
+  auto &tagElem = level2TagsArray->getElementSchema();
+  REQUIRE(tagElem.getTypeName() == "string");
+}
