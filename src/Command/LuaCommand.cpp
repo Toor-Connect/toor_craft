@@ -1,27 +1,15 @@
 #include "LuaCommand.h"
 #include "LuaManager.h"
 
-LuaCommand::LuaCommand(const LuaCommandConfig& config)
-    : Command(config), config_(config)
+LuaCommand::LuaCommand(LuaCommandConfig config)
+    : Command(std::move(config)),
+      scriptName_(std::move(config.scriptName)),
+      scriptContent_(std::move(config.scriptContent)),
+      params_(std::move(config.params))
 {
 }
 
-bool LuaCommand::execute(const Entity& entity,
-                         const std::unordered_map<std::string, std::string>& overrideParams,
-                         std::string& error)
+void LuaCommand::execute(const Entity &entity) const
 {
-    // Merge overrideParams into config_.params (override has priority)
-    std::unordered_map<std::string, std::string> finalParams = config_.params;
-    for (const auto& [key, value] : overrideParams) {
-        finalParams[key] = value;
-    }
-
-    std::string internalError;
-    bool result = LuaManager::instance().runScript(config_.scriptPath, const_cast<Entity&>(entity), finalParams, internalError);
-
-    if (!result) {
-        error = std::move(internalError);
-    }
-
-    return result;
+    LuaManager::instance().runScript(scriptName_, scriptContent_, entity, params_);
 }

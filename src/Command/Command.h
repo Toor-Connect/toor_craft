@@ -7,24 +7,25 @@
 class Entity; // Forward declare your Entity class
 
 // Base config for commands
-struct CommandConfig {
+struct CommandConfig
+{
     std::string id;
     std::string type;
     virtual ~CommandConfig() = default;
 };
 
-class Command {
+class Command
+{
 public:
-    explicit Command(const CommandConfig& config)
-        : id_(config.id), type_(config.type) {}
+    explicit Command(CommandConfig config)
+        : id_(std::move(config.id)), type_(std::move(config.type))
+    {
+    }
     virtual ~Command() = default;
 
-    const std::string& getId() const { return id_; }
-    const std::string& getType() const { return type_; }
-
-    virtual bool execute(const Entity& entity,
-                     const std::unordered_map<std::string, std::string>& params,
-                     std::string& error) = 0;
+    const std::string &getId() const { return id_; }
+    const std::string &getType() const { return type_; }
+    virtual void execute(const Entity &entity) const = 0;
 
 protected:
     std::string id_;
