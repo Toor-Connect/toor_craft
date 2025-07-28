@@ -7,6 +7,7 @@
 #include <optional>
 // TO DO! Create a command factory
 #include "LuaCommand.h"
+#include "LuaManager.h"
 
 static std::unique_ptr<FieldSchema> buildFieldFromNode(const YAML::Node &fieldNode);
 static std::unique_ptr<FieldSchema> buildPrimitiveField(const std::string &type, const YAML::Node &fieldNode, const std::string &name);
@@ -396,4 +397,9 @@ void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std:
             parseCommands(entity, node["commands"]);
         }
     }
+}
+
+void SchemaManager::setBasePath(const std::filesystem::path &basePath)
+{
+    LuaManager::instance().setBasePath(basePath);
 }

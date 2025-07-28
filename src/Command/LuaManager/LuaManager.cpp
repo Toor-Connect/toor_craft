@@ -432,3 +432,8 @@ void LuaManager::runScript(const std::string &scriptPath, const Entity &entity,
 {
     return impl_->runScript(scriptPath, entity, params);
 }
+
+void LuaManager::setBasePath(const std::filesystem::path &basePath)
+{
+    impl_->fs_->setBasePath(basePath);
+}

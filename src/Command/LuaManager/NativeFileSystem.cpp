@@ -3,11 +3,26 @@
 #include <fstream>
 #include <sstream>
 
+std::filesystem::path NativeFileSystem::resolvePath(const std::string &path) const
+{
+    std::filesystem::path p(path);
+    if (p.is_absolute())
+    {
+        return p;
+    }
+    if (!basePath_.empty())
+    {
+        return basePath_ / p;
+    }
+    return std::filesystem::current_path() / p;
+}
+
 void NativeFileSystem::writeFile(const std::string &path, const std::string &content)
 {
     try
     {
-        std::ofstream ofs(path);
+        auto resolvedPath = resolvePath(path);
+        std::ofstream ofs(resolvedPath);
         if (!ofs)
         {
             throw std::runtime_error("Failed to open file for writing: " + path);
@@ -24,7 +39,8 @@ void NativeFileSystem::readFile(const std::string &path, std::string &outContent
 {
     try
     {
-        std::ifstream ifs(path);
+        auto resolved = resolvePath(path);
+        std::ifstream ifs(resolved);
         if (!ifs)
         {
             throw std::runtime_error("Failed to open file for reading: " + path);
