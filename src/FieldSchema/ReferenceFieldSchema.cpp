@@ -1,11 +1,7 @@
 #include "ReferenceFieldSchema.h"
 
-ReferenceFieldSchema::ReferenceFieldSchema(const ReferenceFieldSchemaConfig &config)
-    : FieldSchema(config), targetEntityName_(config.targetEntityName)
+ReferenceFieldSchema::ReferenceFieldSchema(ReferenceFieldSchemaConfig config)
+    : FieldSchema(std::move(config)),
+      targetEntityName_(config.targetEntityName)
 {
-}
-
-const std::string &ReferenceFieldSchema::getTargetEntityName() const
-{
-    return targetEntityName_;
 }

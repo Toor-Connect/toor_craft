@@ -1,15 +1,14 @@
 #pragma once
-
 #include "FieldSchema.h"
-#include <optional>
 
-
-struct BooleanFieldSchemaConfig : FieldSchemaConfig {
-    virtual ~BooleanFieldSchemaConfig() = default;
+struct BooleanFieldSchemaConfig : FieldSchemaConfig
+{
 };
 
-class BooleanFieldSchema : public FieldSchema {
+class BooleanFieldSchema : public FieldSchema
+{
 public:
-    explicit BooleanFieldSchema(const BooleanFieldSchemaConfig& config);
+    explicit BooleanFieldSchema(BooleanFieldSchemaConfig config);
+
     std::string getTypeName() const override { return "boolean"; }
 };

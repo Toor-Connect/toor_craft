@@ -6,6 +6,8 @@ set(SOURCES
     FloatFieldSchema.cpp
     IntegerFieldSchema.cpp
     ReferenceFieldSchema.cpp
+    ObjectFieldSchema.cpp
+    ArrayFieldSchema.cpp
 )
 
 add_library(FieldSchemaLib STATIC ${SOURCES})

@@ -1,25 +1,17 @@
 #pragma once
-
 #include "FieldSchema.h"
-#include <optional>
-#include <string>
 
 struct ReferenceFieldSchemaConfig : FieldSchemaConfig
 {
-    std::string targetEntityName; // type of entity this reference points to
-
-    ReferenceFieldSchemaConfig() = default;
-    // Add constructors or default values as needed
+    std::string targetEntityName;
 };
 
 class ReferenceFieldSchema : public FieldSchema
 {
 public:
-    explicit ReferenceFieldSchema(const ReferenceFieldSchemaConfig &config);
-
-    const std::string &getTargetEntityName() const;
-
+    explicit ReferenceFieldSchema(ReferenceFieldSchemaConfig config); // ✅ pass by value
     std::string getTypeName() const override { return "reference"; }
+    const std::string &getTargetEntityName() const { return targetEntityName_; }
 
 private:
     std::string targetEntityName_;

@@ -13,28 +13,31 @@
 #include "ReferenceFieldSchema.h"
 #include "EnumFieldSchema.h"
 #include "FloatFieldSchema.h"
+#include "ArrayFieldSchema.h"
+#include "ObjectFieldSchema.h"
 
 class FieldSchemaFactory
 {
 public:
-    using CreatorFunc = std::function<std::unique_ptr<FieldSchema>(const FieldSchemaConfig &)>;
+    using CreatorFunc = std::function<std::unique_ptr<FieldSchema>(FieldSchemaConfig &&)>;
 
     static FieldSchemaFactory &instance();
 
     void registerType(const std::string &typeName, CreatorFunc creator);
 
-    std::unique_ptr<FieldSchema> create(const std::string &typeName, const FieldSchemaConfig &config) const;
+    // ✅ create now requires rvalue
+    std::unique_ptr<FieldSchema> create(const std::string &typeName, FieldSchemaConfig &&config) const;
 
     template <typename FieldType, typename ConfigType>
     void registerFieldSchemaType(const std::string &typeName)
     {
-        registerType(typeName, [typeName](const FieldSchemaConfig &config)
+        registerType(typeName, [typeName](FieldSchemaConfig &&config)
                      {
-            auto derivedConfig = dynamic_cast<const ConfigType*>(&config);
+            auto derivedConfig = dynamic_cast<ConfigType*>(&config);
             if (!derivedConfig) {
                 throw std::runtime_error("Invalid config type for " + typeName);
             }
-            return std::make_unique<FieldType>(*derivedConfig); });
+            return std::make_unique<FieldType>(std::move(*derivedConfig)); });
     }
 
 private:

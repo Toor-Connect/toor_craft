@@ -6,6 +6,8 @@ set(SOURCES
     IntegerFieldValue.cpp
     StringFieldValue.cpp
     ReferenceFieldValue.cpp
+    ObjectFieldValue.cpp
+    ArrayFieldValue.cpp
 )
 
 add_library(FieldValueLib STATIC ${SOURCES})

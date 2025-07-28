@@ -1,5 +1,6 @@
 #include "StringFieldSchema.h"
 
-StringFieldSchema::StringFieldSchema(const StringFieldSchemaConfig& config)
-    : FieldSchema(config) {
+StringFieldSchema::StringFieldSchema(StringFieldSchemaConfig config)
+    : FieldSchema(std::move(config))
+{
 }

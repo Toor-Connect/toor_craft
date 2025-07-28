@@ -27,11 +27,11 @@ struct FieldSchemaConfig
 class FieldSchema
 {
 public:
-    explicit FieldSchema(const FieldSchemaConfig &config)
+    explicit FieldSchema(FieldSchemaConfig config)
         : name_(config.name),
           required_(config.required),
           alias_(config.alias),
-          config_(config)
+          config_(std::move(config))
     {
     }
 

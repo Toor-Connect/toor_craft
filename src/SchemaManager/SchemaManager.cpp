@@ -6,6 +6,11 @@
 #include <unordered_set>
 #include <optional>
 
+static std::unique_ptr<FieldSchema> buildFieldFromNode(const YAML::Node &fieldNode);
+static std::unique_ptr<FieldSchema> buildPrimitiveField(const std::string &type, const YAML::Node &fieldNode, const std::string &name);
+static std::unique_ptr<FieldSchema> buildObjectField(const YAML::Node &fieldNode, const std::string &name);
+static std::unique_ptr<FieldSchema> buildArrayField(const YAML::Node &fieldNode, const std::string &name);
+
 SchemaManager &SchemaManager::instance()
 {
     static SchemaManager instance;
@@ -71,7 +76,143 @@ ConfigType buildConfig(const YAML::Node &fieldNode, const std::string &name)
                        ? std::make_optional(fieldNode["alias"].as<std::string>())
                        : std::make_optional(name);
 
-    return config;
+    return std::move(config);
+}
+
+static std::unique_ptr<FieldSchema> buildPrimitiveField(const std::string &type, const YAML::Node &fieldNode, const std::string &name)
+{
+    if (type == "boolean")
+    {
+        auto config = buildConfig<BooleanFieldSchemaConfig>(fieldNode, name);
+        return FieldSchemaFactory::instance().create(type, std::move(config));
+    }
+    if (type == "string")
+    {
+        auto config = buildConfig<StringFieldSchemaConfig>(fieldNode, name);
+        return FieldSchemaFactory::instance().create(type, std::move(config));
+    }
+    if (type == "integer")
+    {
+        auto config = buildConfig<IntegerFieldSchemaConfig>(fieldNode, name);
+        config.minValue = fieldNode["min"] ? std::make_optional(fieldNode["min"].as<int64_t>()) : std::nullopt;
+        config.maxValue = fieldNode["max"] ? std::make_optional(fieldNode["max"].as<int64_t>()) : std::nullopt;
+        return FieldSchemaFactory::instance().create(type, std::move(config));
+    }
+    if (type == "float")
+    {
+        auto config = buildConfig<FloatFieldSchemaConfig>(fieldNode, name);
+        config.minValue = fieldNode["min"] ? std::make_optional(fieldNode["min"].as<double>()) : std::nullopt;
+        config.maxValue = fieldNode["max"] ? std::make_optional(fieldNode["max"].as<double>()) : std::nullopt;
+        return FieldSchemaFactory::instance().create(type, std::move(config));
+    }
+    if (type == "enum")
+    {
+        auto config = buildConfig<EnumFieldSchemaConfig>(fieldNode, name);
+        if (!fieldNode["values"] || !fieldNode["values"].IsSequence())
+        {
+            throw std::runtime_error("Enum field must have a 'values' array.");
+        }
+        for (const auto &valNode : fieldNode["values"])
+        {
+            config.allowedValues.push_back(valNode.as<std::string>());
+        }
+        return FieldSchemaFactory::instance().create(type, std::move(config));
+    }
+    if (type == "reference")
+    {
+        auto config = buildConfig<ReferenceFieldSchemaConfig>(fieldNode, name);
+        if (fieldNode["target"])
+        {
+            config.targetEntityName = fieldNode["target"].as<std::string>();
+        }
+        return FieldSchemaFactory::instance().create(type, std::move(config));
+    }
+
+    throw std::runtime_error("Unsupported primitive type: " + type);
+}
+
+static std::unique_ptr<FieldSchema> buildObjectField(const YAML::Node &fieldNode, const std::string &name)
+{
+    ObjectFieldSchemaConfig config = buildConfig<ObjectFieldSchemaConfig>(fieldNode, name);
+
+    auto objSchema = std::unique_ptr<ObjectFieldSchema>(
+        static_cast<ObjectFieldSchema *>(FieldSchemaFactory::instance()
+                                             .create("object", std::move(config))
+                                             .release()));
+
+    if (!fieldNode["fields"] || !fieldNode["fields"].IsMap())
+    {
+        throw std::runtime_error("Object field must have a 'fields' map.");
+    }
+
+    for (auto it = fieldNode["fields"].begin(); it != fieldNode["fields"].end(); ++it)
+    {
+        std::string childName = it->first.as<std::string>();
+        YAML::Node childNode = it->second;
+
+        if (!childNode["name"])
+        {
+            childNode["name"] = childName;
+        }
+
+        auto childSchema = buildFieldFromNode(childNode);
+        objSchema->addField(std::move(childSchema));
+    }
+
+    return objSchema;
+}
+
+static std::unique_ptr<FieldSchema> buildArrayField(const YAML::Node &fieldNode, const std::string &name)
+{
+    ArrayFieldSchemaConfig config = buildConfig<ArrayFieldSchemaConfig>(fieldNode, name);
+
+    if (!fieldNode["element"] || !fieldNode["element"]["type"])
+    {
+        throw std::runtime_error("Array field '" + name + "' must define 'element' with a 'type'.");
+    }
+
+    YAML::Node elemNode = fieldNode["element"];
+    std::string elemType = elemNode["type"].as<std::string>();
+
+    std::unique_ptr<FieldSchema> elementSchema;
+    if (elemType == "object")
+    {
+        elementSchema = buildObjectField(elemNode, name + "_elem");
+    }
+    else if (elemType == "array")
+    {
+        elementSchema = buildArrayField(elemNode, name + "_elem");
+    }
+    else
+    {
+        elementSchema = buildPrimitiveField(elemType, elemNode, name + "_elem");
+    }
+
+    config.elementSchema = std::move(elementSchema);
+
+    return FieldSchemaFactory::instance().create("array", std::move(config));
+}
+
+static std::unique_ptr<FieldSchema> buildFieldFromNode(const YAML::Node &fieldNode)
+{
+    if (!fieldNode["type"])
+    {
+        throw std::runtime_error("Field is missing a 'type' key.");
+    }
+
+    std::string type = fieldNode["type"].as<std::string>();
+    std::string name = fieldNode["name"] ? fieldNode["name"].as<std::string>() : "";
+
+    if (type == "object")
+    {
+        return buildObjectField(fieldNode, name);
+    }
+    if (type == "array")
+    {
+        return buildArrayField(fieldNode, name);
+    }
+
+    return buildPrimitiveField(type, fieldNode, name);
 }
 
 void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std::string> &schemaContent)
@@ -91,7 +232,6 @@ void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std:
             throw std::runtime_error("Invalid schema format for file: " + fileName);
         }
 
-        // ✅ NEW: Check top-level keys are valid
         static const std::unordered_set<std::string> validKeys = {
             "profile_name", "entity_name", "fields", "children", "commands"};
 
@@ -105,22 +245,18 @@ void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std:
             }
         }
 
-        // ✅ NEW: Check "fields" must be a sequence if present
         if (node["fields"] && !node["fields"].IsSequence())
         {
             throw std::runtime_error(
                 "In file '" + fileName + "', 'fields' must be a YAML sequence.");
         }
 
-        // ✅ NEW: Check "children" must be a map if present
         if (node["children"] && !node["children"].IsMap())
         {
             throw std::runtime_error(
                 "In file '" + fileName + "', 'children' must be a YAML map.");
         }
 
-        // --- EXISTING CODE ---
-        // Must have either profile_name or entity_name
         std::string name;
         bool isProfile = false;
         if (node["profile_name"])
@@ -137,13 +273,11 @@ void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std:
             throw std::runtime_error("File '" + fileName + "' must define either profile_name or entity_name.");
         }
 
-        // Check for duplicates
         if (entityLookup_.find(name) != entityLookup_.end())
         {
             throw std::runtime_error("Duplicate entity/profile name detected: " + name);
         }
 
-        // Create empty skeleton entity
         auto entity = std::make_unique<EntitySchema>(name);
         EntitySchema *entityPtr = entity.get();
 
@@ -156,7 +290,6 @@ void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std:
         }
     }
 
-    // --- PASS 2: Fill each entity (unchanged) ---
     for (const auto &pair : schemaContent)
     {
         const std::string &yamlContent = pair.second;
@@ -168,132 +301,19 @@ void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std:
 
         EntitySchema *entity = entityLookup_[name];
 
-        // ✅ Your existing deep validation code for fields, enums, references, etc.
-        // (kept as-is from your previous implementation)
         if (node["fields"])
         {
             for (const auto &fieldNode : node["fields"])
             {
                 if (!fieldNode.IsMap())
-                    throw std::runtime_error("Check the format in schema " + name);
+                    throw std::runtime_error("Invalid field format.");
 
                 if (!fieldNode["name"] || !fieldNode["type"])
-                    throw std::runtime_error("Check the format of fields in schema " + name);
+                    throw std::runtime_error("Each field must have a 'name' and 'type'.");
 
-                std::string name = fieldNode["name"].as<std::string>();
-                std::string type = fieldNode["type"].as<std::string>();
-
-                static const std::unordered_set<std::string> validTypes = {
-                    "boolean", "string", "integer", "float", "enum", "reference"};
-
-                if (validTypes.find(type) == validTypes.end())
-                {
-                    std::string validTypesStr;
-                    for (const auto &t : validTypes)
-                    {
-                        if (!validTypesStr.empty())
-                            validTypesStr += ", ";
-                        validTypesStr += t;
-                    }
-                    throw std::runtime_error(
-                        "Invalid field type '" + type + "' in schema " + name +
-                        ". Valid types are: " + validTypesStr);
-                }
-
-                std::unique_ptr<FieldSchema> fieldSchema;
-
-                if (type == "boolean")
-                {
-                    auto config = buildConfig<BooleanFieldSchemaConfig>(fieldNode, name);
-                    fieldSchema = FieldSchemaFactory::instance().create(type, config);
-                }
-                else if (type == "string")
-                {
-                    auto config = buildConfig<StringFieldSchemaConfig>(fieldNode, name);
-                    fieldSchema = FieldSchemaFactory::instance().create(type, config);
-                }
-                else if (type == "integer")
-                {
-                    auto config = buildConfig<IntegerFieldSchemaConfig>(fieldNode, name);
-                    config.minValue = fieldNode["min"]
-                                          ? std::make_optional(fieldNode["min"].as<int64_t>())
-                                          : std::nullopt;
-                    config.maxValue = fieldNode["max"]
-                                          ? std::make_optional(fieldNode["max"].as<int64_t>())
-                                          : std::nullopt;
-                    fieldSchema = FieldSchemaFactory::instance().create(type, config);
-                }
-                else if (type == "float")
-                {
-                    auto config = buildConfig<FloatFieldSchemaConfig>(fieldNode, name);
-                    config.minValue = fieldNode["min"]
-                                          ? std::make_optional(fieldNode["min"].as<double>())
-                                          : std::nullopt;
-                    config.maxValue = fieldNode["max"]
-                                          ? std::make_optional(fieldNode["max"].as<double>())
-                                          : std::nullopt;
-                    fieldSchema = FieldSchemaFactory::instance().create(type, config);
-                }
-                else if (type == "enum")
-                {
-                    EnumFieldSchemaConfig config = buildConfig<EnumFieldSchemaConfig>(fieldNode, name);
-
-                    if (!fieldNode["values"] || !fieldNode["values"].IsSequence())
-                    {
-                        throw std::runtime_error(
-                            "Enum field '" + name + "' in schema '" + entity->getName() +
-                            "' must have a YAML sequence 'values'.");
-                    }
-
-                    for (const auto &valueNode : fieldNode["values"])
-                    {
-                        if (!valueNode.IsScalar())
-                        {
-                            throw std::runtime_error(
-                                "Enum field '" + name + "' in schema '" + entity->getName() +
-                                "' has an invalid entry in 'values'. Each value must be a string.");
-                        }
-
-                        std::string value = valueNode.as<std::string>();
-                        if (value.empty())
-                        {
-                            throw std::runtime_error(
-                                "Enum field '" + name + "' in schema '" + entity->getName() +
-                                "' has an empty string in 'values'.");
-                        }
-
-                        config.allowedValues.push_back(value);
-                    }
-
-                    if (config.allowedValues.empty())
-                    {
-                        throw std::runtime_error(
-                            "Enum field '" + name + "' in schema '" + entity->getName() +
-                            "' must have at least one value in 'values'.");
-                    }
-
-                    fieldSchema = FieldSchemaFactory::instance().create(type, config);
-                }
-                else if (type == "reference")
-                {
-                    ReferenceFieldSchemaConfig config = buildConfig<ReferenceFieldSchemaConfig>(fieldNode, name);
-                    if (fieldNode["target"])
-                    {
-                        config.targetEntityName = fieldNode["target"].as<std::string>();
-                        if (entityLookup_.find(config.targetEntityName) == entityLookup_.end())
-                        {
-                            throw std::runtime_error(
-                                "Reference field '" + name + "' in schema '" + entity->getName() +
-                                "' points to non-existent entity '" + config.targetEntityName + "'.");
-                        }
-                    }
-                    fieldSchema = FieldSchemaFactory::instance().create(type, config);
-                }
-
-                if (fieldSchema)
-                {
-                    entity->addField(std::move(fieldSchema));
-                }
+                std::string fieldName = fieldNode["name"].as<std::string>();
+                auto schema = buildFieldFromNode(fieldNode);
+                entity->addField(std::move(schema));
             }
         }
 
@@ -322,7 +342,6 @@ void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std:
                         "' in schema '" + name + "' does not exist.");
                 }
 
-                // ✅ Now we store by relationTag, not by entity name
                 entity->addChildSchema(relationTag, childIt->second);
             }
         }

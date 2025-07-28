@@ -1,15 +1,13 @@
 #pragma once
-
 #include "FieldSchema.h"
-#include <optional>
-#include <string>
 
-struct StringFieldSchemaConfig : FieldSchemaConfig {
-    virtual ~StringFieldSchemaConfig() = default;
+struct StringFieldSchemaConfig : FieldSchemaConfig
+{
 };
 
-class StringFieldSchema : public FieldSchema {
+class StringFieldSchema : public FieldSchema
+{
 public:
-    explicit StringFieldSchema(const StringFieldSchemaConfig& config);
+    explicit StringFieldSchema(StringFieldSchemaConfig config);
     std::string getTypeName() const override { return "string"; }
 };

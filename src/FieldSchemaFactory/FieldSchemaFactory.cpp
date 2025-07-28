@@ -14,6 +14,8 @@ FieldSchemaFactory::FieldSchemaFactory()
     registerFieldSchemaType<BooleanFieldSchema, BooleanFieldSchemaConfig>("boolean");
     registerFieldSchemaType<ReferenceFieldSchema, ReferenceFieldSchemaConfig>("reference");
     registerFieldSchemaType<EnumFieldSchema, EnumFieldSchemaConfig>("enum");
+    registerFieldSchemaType<ArrayFieldSchema, ArrayFieldSchemaConfig>("array");
+    registerFieldSchemaType<ObjectFieldSchema, ObjectFieldSchemaConfig>("object");
 }
 
 void FieldSchemaFactory::registerType(const std::string &typeName, CreatorFunc creator)
@@ -21,12 +23,12 @@ void FieldSchemaFactory::registerType(const std::string &typeName, CreatorFunc c
     creators_[typeName] = std::move(creator);
 }
 
-std::unique_ptr<FieldSchema> FieldSchemaFactory::create(const std::string &typeName, const FieldSchemaConfig &config) const
+std::unique_ptr<FieldSchema> FieldSchemaFactory::create(const std::string &typeName, FieldSchemaConfig &&config) const
 {
     auto it = creators_.find(typeName);
     if (it == creators_.end())
     {
         throw std::runtime_error("Unknown field type: " + typeName);
     }
-    return it->second(config);
+    return it->second(std::move(config));
 }
