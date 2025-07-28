@@ -2,8 +2,9 @@
 #include "FileSystemInterface.h"
 #include <fstream>
 
-class NativeFileSystem : public FileSystemInterface {
+class NativeFileSystem : public FileSystemInterface
+{
 public:
-    bool writeFile(const std::string& path, const std::string& content, std::string& error) override;
-    bool readFile(const std::string& path, std::string& outContent, std::string& error) override;
+    void writeFile(const std::string &path, const std::string &content) override;
+    void readFile(const std::string &path, std::string &outContent) override;
 };

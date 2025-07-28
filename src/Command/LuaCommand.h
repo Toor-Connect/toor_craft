@@ -5,8 +5,7 @@
 
 struct LuaCommandConfig : public CommandConfig
 {
-    std::string scriptName;
-    std::string scriptContent;
+    std::string scriptPath;
     std::unordered_map<std::string, std::string> params;
 };
 
@@ -18,7 +17,6 @@ public:
     void execute(const Entity &entity) const override;
 
 private:
-    std::string scriptName_;
-    std::string scriptContent_;
+    std::string scriptPath_;
     std::unordered_map<std::string, std::string> params_;
 };

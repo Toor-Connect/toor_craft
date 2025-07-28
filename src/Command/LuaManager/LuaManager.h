@@ -7,15 +7,11 @@ class LuaManager
 {
 public:
     static LuaManager &instance();
-    void setBaseDirectory(const std::string &baseDir);
-    void runScript(const std::string &scriptName,
-                   const std::string &scriptContent,
+    void runScript(const std::string &scriptPath_,
                    const Entity &entity,
                    const std::unordered_map<std::string, std::string> &params);
 
 private:
-    // Implementation class (nested private)
-    std::string baseDirectory_;
     class LuaManagerImpl;
     LuaManagerImpl *impl_;
 

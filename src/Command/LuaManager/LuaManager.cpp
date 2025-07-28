@@ -23,11 +23,10 @@ class LuaManager::LuaManagerImpl
 {
 public:
     lua_State *L;
-    fs::path baseDirectory_; // Base dir for relative paths
     std::unique_ptr<FileSystemInterface> fs_;
 
     LuaManagerImpl()
-        : fs_(createFileSystem()) // ✅ Now we get NativeFileSystem or WasmFileSystem depending on build
+        : fs_(createFileSystem())
     {
         L = luaL_newstate();
         if (L)
@@ -44,22 +43,6 @@ public:
             lua_close(L);
             L = nullptr;
         }
-    }
-
-    void setBaseDirectory(const std::string &baseDir)
-    {
-        baseDirectory_ = fs::path(baseDir);
-    }
-
-    // Resolve a path: if absolute, keep as is; if relative, join with baseDirectory_
-    fs::path resolvePath(const std::string &path)
-    {
-        fs::path p(path);
-        if (p.is_absolute())
-            return p;
-        if (baseDirectory_.empty())
-            throw std::runtime_error("Base directory for LuaManager not set");
-        return baseDirectory_ / p;
     }
 
     // ---------- JSON ↔ Lua Helpers ----------
@@ -219,29 +202,15 @@ public:
         try
         {
             LuaManager &manager = LuaManager::instance();
-            fs::path templatePath = manager.impl_->resolvePath(templatePathC);
-            fs::path outputPath = manager.impl_->resolvePath(outputPathC);
 
-            // ✅ Use FileSystemInterface for reading template
-            std::string templateContent, error;
-            if (!manager.impl_->fs_->readFile(templatePath.string(), templateContent, error))
-            {
-                lua_pushboolean(L, false);
-                lua_pushstring(L, error.c_str());
-                return 2;
-            }
+            std::string templateContent;
+            manager.impl_->fs_->readFile(templatePathC, templateContent);
 
             nlohmann::json jsonData = luaToJson(L, 3);
             inja::Environment env;
             std::string rendered = env.render(templateContent, jsonData);
 
-            // ✅ Use FileSystemInterface for writing output
-            if (!manager.impl_->fs_->writeFile(outputPath.string(), rendered, error))
-            {
-                lua_pushboolean(L, false);
-                lua_pushstring(L, error.c_str());
-                return 2;
-            }
+            manager.impl_->fs_->writeFile(outputPathC, rendered);
 
             lua_pushboolean(L, true);
             lua_pushstring(L, "");
@@ -312,37 +281,46 @@ public:
 
     static int lua_writeFile(lua_State *L)
     {
-        const char *filepath = luaL_checkstring(L, 1);
-        const char *content = luaL_checkstring(L, 2);
+        try
+        {
+            const char *filepath = luaL_checkstring(L, 1);
+            const char *content = luaL_checkstring(L, 2);
 
-        LuaManager &manager = LuaManager::instance();
-        std::string error;
-        bool ok = manager.impl_->fs_->writeFile(filepath, content, error);
+            LuaManager &manager = LuaManager::instance();
 
-        lua_pushboolean(L, ok);
-        lua_pushstring(L, error.c_str());
-        return 2;
+            manager.impl_->fs_->writeFile(filepath, content);
+
+            lua_pushboolean(L, true);
+            lua_pushstring(L, "");
+            return 2;
+        }
+        catch (const std::exception &e)
+        {
+            lua_pushboolean(L, false);
+            lua_pushstring(L, e.what());
+            return 2;
+        }
     }
 
     static int lua_readFile(lua_State *L)
     {
-        const char *filepath = luaL_checkstring(L, 1);
-
-        LuaManager &manager = LuaManager::instance();
-        std::string content;
-        std::string error;
-        bool ok = manager.impl_->fs_->readFile(filepath, content, error);
-
-        if (!ok)
+        try
         {
-            lua_pushnil(L);
-            lua_pushstring(L, error.c_str());
+            const char *filepath = luaL_checkstring(L, 1);
+            std::string content;
+            LuaManager &manager = LuaManager::instance();
+            manager.impl_->fs_->readFile(filepath, content);
+
+            lua_pushboolean(L, true);
+            lua_pushstring(L, content.c_str());
+            return 1;
+        }
+        catch (const std::exception &e)
+        {
+            lua_pushboolean(L, false);
+            lua_pushstring(L, e.what());
             return 2;
         }
-
-        lua_pushstring(L, content.c_str());
-        lua_pushstring(L, "");
-        return 2;
     }
 
     void registerLuaFunctions()
@@ -372,8 +350,7 @@ public:
         lua_pushstring(L, entity.getId().c_str());
     }
 
-    void runScript(const std::string &scriptName,
-                   const std::string &scriptContent,
+    void runScript(const std::string &scriptPath,
                    const Entity &entity,
                    const std::unordered_map<std::string, std::string> &params)
     {
@@ -381,6 +358,10 @@ public:
         {
             throw std::runtime_error("Lua state not initialized");
         }
+
+        LuaManager &manager = LuaManager::instance();
+        std::string scriptContent;
+        manager.impl_->fs_->readFile(scriptPath, scriptContent);
 
         struct LuaStackGuard
         {
@@ -390,11 +371,12 @@ public:
             ~LuaStackGuard() { lua_settop(L, top); }
         } guard(L);
 
-        int loadStatus = luaL_loadbuffer(L, scriptContent.c_str(), scriptContent.size(), scriptName.c_str());
+        int loadStatus = luaL_loadbuffer(L, scriptContent.c_str(), scriptContent.size(), scriptPath.c_str());
+
         if (loadStatus != LUA_OK)
         {
             std::string err = lua_tostring(L, -1);
-            throw std::runtime_error("[LuaManager] Failed to load script '" + scriptName + "': " + err);
+            throw std::runtime_error("[LuaManager] Failed to load script '" + scriptPath + "': " + err);
         }
 
         pushEntity(entity);
@@ -404,12 +386,12 @@ public:
         if (callStatus != LUA_OK)
         {
             std::string err = lua_tostring(L, -1);
-            throw std::runtime_error("[LuaManager] Lua runtime error in '" + scriptName + "': " + err);
+            throw std::runtime_error("[LuaManager] Lua runtime error in '" + scriptPath + "': " + err);
         }
 
         if (!lua_isboolean(L, -1))
         {
-            throw std::runtime_error("Lua script '" + scriptName + "' must return a boolean as the first value");
+            throw std::runtime_error("Lua script '" + scriptPath + "' must return a boolean as the first value");
         }
 
         bool success = lua_toboolean(L, -1);
@@ -422,11 +404,11 @@ public:
 
         if (!lua_isstring(L, -1))
         {
-            throw std::runtime_error("Lua script '" + scriptName + "' failed but did not return an error message");
+            throw std::runtime_error("Lua script '" + scriptPath + "' failed but did not return an error message");
         }
 
         std::string errorMsg = lua_tostring(L, -1);
-        throw std::runtime_error("[LuaManager] Script '" + scriptName + "' failed: " + errorMsg);
+        throw std::runtime_error("[LuaManager] Script '" + scriptPath + "' failed: " + errorMsg);
     }
 };
 
@@ -445,13 +427,8 @@ LuaManager::~LuaManager()
     delete impl_;
 }
 
-void LuaManager::setBaseDirectory(const std::string &baseDir)
-{
-    impl_->setBaseDirectory(baseDir);
-}
-
-void LuaManager::runScript(const std::string &scriptName, const std::string &scriptContent, const Entity &entity,
+void LuaManager::runScript(const std::string &scriptPath, const Entity &entity,
                            const std::unordered_map<std::string, std::string> &params)
 {
-    return impl_->runScript(scriptName, scriptContent, entity, params);
+    return impl_->runScript(scriptPath, entity, params);
 }
