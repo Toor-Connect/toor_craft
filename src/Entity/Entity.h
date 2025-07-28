@@ -25,7 +25,6 @@ public:
 private:
     const EntitySchema &schema_;
     std::unordered_map<std::string, std::unique_ptr<FieldValue>> fieldValues_;
-
     std::string _id;
     std::string _parentId;
 };

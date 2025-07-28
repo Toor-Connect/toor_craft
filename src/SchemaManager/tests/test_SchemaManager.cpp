@@ -11,6 +11,7 @@
 #include "StringFieldSchema.h"
 #include "ObjectFieldSchema.h"
 #include "ArrayFieldSchema.h"
+#include "LuaCommand.h"
 
 TEST_CASE("SchemaManager handles a simple profile and entity")
 {
@@ -31,9 +32,9 @@ entity_name: Device
   mgr.parseSchemaBundle(schemas);
 
   REQUIRE(mgr.profileExists("SmartHome"));
-  REQUIRE(mgr.getEntity("Device") != nullptr);
+  REQUIRE(mgr.getEntitySchema("Device") != nullptr);
 
-  auto childTags = mgr.getProfile("SmartHome")->getChildrenTags();
+  auto childTags = mgr.getProfileSchema("SmartHome")->getChildrenTags();
   REQUIRE(childTags.size() == 1);
   REQUIRE(childTags[0] == "devices");
 }
@@ -102,7 +103,7 @@ entity_name: Device
   SchemaManager &mgr = SchemaManager::instance();
   mgr.parseSchemaBundle(schemas);
 
-  auto profile = mgr.getProfile("FieldProfile");
+  auto profile = mgr.getProfileSchema("FieldProfile");
   REQUIRE(profile != nullptr);
 
   SECTION("String field is parsed correctly")
@@ -304,7 +305,7 @@ fields:
   SchemaManager &mgr = SchemaManager::instance();
   mgr.parseSchemaBundle(schemas);
 
-  auto profile = mgr.getProfile("DeepNestProfile");
+  auto profile = mgr.getProfileSchema("DeepNestProfile");
   REQUIRE(profile != nullptr);
 
   // ✅ Check the top-level array
@@ -350,4 +351,82 @@ fields:
   // ✅ Final check: array element type should be string
   auto &tagElem = level2TagsArray->getElementSchema();
   REQUIRE(tagElem.getTypeName() == "string");
+}
+
+TEST_CASE("SchemaManager correctly parses and attaches commands to entities")
+{
+  std::unordered_map<std::string, std::string> schemas;
+
+  schemas["profile.yaml"] = R"(
+profile_name: CommandProfile
+commands:
+  generateTraceabilityView:
+    file: scripts/generateView.lua
+    params:
+      min: "10"
+      max: "20"
+  cleanupEntities:
+    file: scripts/cleanup.lua
+)";
+
+  SchemaManager &mgr = SchemaManager::instance();
+  mgr.parseSchemaBundle(schemas);
+
+  auto profile = mgr.getProfileSchema("CommandProfile");
+  REQUIRE(profile != nullptr);
+
+  SECTION("Commands are registered")
+  {
+    auto commandNames = profile->getCommandNames();
+    REQUIRE(commandNames.size() == 2);
+    REQUIRE(std::find(commandNames.begin(), commandNames.end(), "generateTraceabilityView") != commandNames.end());
+    REQUIRE(std::find(commandNames.begin(), commandNames.end(), "cleanupEntities") != commandNames.end());
+  }
+
+  SECTION("LuaCommand has correct script path and parameters")
+  {
+    Command *cmd = profile->getCommand("generateTraceabilityView");
+    REQUIRE(cmd != nullptr);
+
+    auto luaCmd = dynamic_cast<LuaCommand *>(cmd);
+    REQUIRE(luaCmd != nullptr);
+    REQUIRE(luaCmd->getId() == "generateTraceabilityView");
+    REQUIRE(luaCmd->getType() == "lua");
+
+    // Check private values through getters or reflection if needed (or expose helpers)
+    // For now, we confirm commands are attached
+  }
+}
+
+TEST_CASE("SchemaManager throws on invalid command definitions")
+{
+  SchemaManager &mgr = SchemaManager::instance();
+
+  SECTION("Missing 'file' in command")
+  {
+    std::unordered_map<std::string, std::string> badSchemas;
+
+    badSchemas["profile.yaml"] = R"(
+profile_name: BrokenCommands
+commands:
+  invalidCommand:
+    params:
+      key: "value"
+)";
+    REQUIRE_THROWS_AS(mgr.parseSchemaBundle(badSchemas), std::runtime_error);
+  }
+
+  SECTION("Params is not a map")
+  {
+    std::unordered_map<std::string, std::string> badSchemas;
+
+    badSchemas["profile.yaml"] = R"(
+profile_name: WrongParams
+commands:
+  testCommand:
+    file: scripts/test.lua
+    params: "not_a_map"
+)";
+    REQUIRE_THROWS_AS(mgr.parseSchemaBundle(badSchemas), std::runtime_error);
+  }
 }

@@ -36,7 +36,7 @@ bool SchemaManager::profileExists(const std::string &profileName) const
     return profiles_.find(profileName) != profiles_.end();
 }
 
-EntitySchema *SchemaManager::getProfile(const std::string &profileName) const
+EntitySchema *SchemaManager::getProfileSchema(const std::string &profileName) const
 {
     auto it = profiles_.find(profileName);
     if (it == profiles_.end())
@@ -44,7 +44,7 @@ EntitySchema *SchemaManager::getProfile(const std::string &profileName) const
     return it->second;
 }
 
-std::vector<std::string> SchemaManager::getProfileNames() const
+std::vector<std::string> SchemaManager::getProfileSchemaNames() const
 {
     std::vector<std::string> names;
     names.reserve(profiles_.size());
@@ -53,7 +53,7 @@ std::vector<std::string> SchemaManager::getProfileNames() const
     return names;
 }
 
-std::vector<std::string> SchemaManager::getEntityNames() const
+std::vector<std::string> SchemaManager::getEntitySchemaNames() const
 {
     std::vector<std::string> names;
     names.reserve(entityLookup_.size());
@@ -62,7 +62,7 @@ std::vector<std::string> SchemaManager::getEntityNames() const
     return names;
 }
 
-EntitySchema *SchemaManager::getEntity(const std::string &entityName) const
+EntitySchema *SchemaManager::getEntitySchema(const std::string &entityName) const
 {
     auto it = entityLookup_.find(entityName);
     if (it == entityLookup_.end())
