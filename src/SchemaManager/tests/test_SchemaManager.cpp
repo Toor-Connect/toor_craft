@@ -45,30 +45,30 @@ TEST_CASE("SchemaManager handles all field types including object and array")
   schemas["profile.yaml"] = R"(
 profile_name: FieldProfile
 fields:
-  - name: name
+  name:
     type: string
     alias: full_name
-  - name: active
+  active:
     type: boolean
     required: true
-  - name: age
+  age:
     type: integer
     min: 0
     max: 120
-  - name: temperature
+  temperature:
     type: float
     min: -50.5
     max: 150.75
-  - name: role
+  role:
     type: enum
     values:
       - admin
       - user
       - guest
-  - name: device_ref
+  device_ref:
     type: reference
     target: Device
-  - name: settings
+  settings:
     type: object
     fields:
       volume:
@@ -77,11 +77,11 @@ fields:
         max: 100
       mode:
         type: string
-  - name: tags
+  tags:
     type: array
     element:
       type: string
-  - name: sensors
+  sensors:
     type: array
     element:
       type: object
@@ -281,7 +281,7 @@ TEST_CASE("SchemaManager handles deeply nested arrays and objects")
   schemas["profile.yaml"] = R"(
 profile_name: DeepNestProfile
 fields:
-  - name: complex_array
+  complex_array:
     type: array
     element:
       type: object

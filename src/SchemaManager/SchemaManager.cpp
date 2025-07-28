@@ -245,10 +245,10 @@ void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std:
             }
         }
 
-        if (node["fields"] && !node["fields"].IsSequence())
+        if (node["fields"] && !node["fields"].IsMap())
         {
             throw std::runtime_error(
-                "In file '" + fileName + "', 'fields' must be a YAML sequence.");
+                "In file '" + fileName + "', 'fields' must be a YAML map.");
         }
 
         if (node["children"] && !node["children"].IsMap())
@@ -303,15 +303,16 @@ void SchemaManager::parseSchemaBundle(const std::unordered_map<std::string, std:
 
         if (node["fields"])
         {
-            for (const auto &fieldNode : node["fields"])
+            for (auto it = node["fields"].begin(); it != node["fields"].end(); ++it)
             {
-                if (!fieldNode.IsMap())
-                    throw std::runtime_error("Invalid field format.");
+                std::string fieldName = it->first.as<std::string>();
+                YAML::Node fieldNode = it->second;
 
-                if (!fieldNode["name"] || !fieldNode["type"])
-                    throw std::runtime_error("Each field must have a 'name' and 'type'.");
+                if (!fieldNode["type"])
+                    throw std::runtime_error("Field '" + fieldName + "' must define a 'type'.");
 
-                std::string fieldName = fieldNode["name"].as<std::string>();
+                fieldNode["name"] = fieldName;
+
                 auto schema = buildFieldFromNode(fieldNode);
                 entity->addField(std::move(schema));
             }
