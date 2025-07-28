@@ -3,24 +3,25 @@
 #include <unordered_map>
 #include <Entity.h>
 
-class LuaManager {
+class LuaManager
+{
 public:
-    static LuaManager& instance();
-    void setBaseDirectory(const std::string& baseDir);
-    bool runScript(const std::string& scriptPath,
-                   Entity& entity,
-                   const std::unordered_map<std::string, std::string>& params,
-                   std::string& error);
+    static LuaManager &instance();
+    void setBaseDirectory(const std::string &baseDir);
+    void runScript(const std::string &scriptName,
+                   const std::string &scriptContent,
+                   const Entity &entity,
+                   const std::unordered_map<std::string, std::string> &params);
 
 private:
     // Implementation class (nested private)
     std::string baseDirectory_;
     class LuaManagerImpl;
-    LuaManagerImpl* impl_;
+    LuaManagerImpl *impl_;
 
     LuaManager();
     ~LuaManager();
 
-    LuaManager(const LuaManager&) = delete;
-    LuaManager& operator=(const LuaManager&) = delete;
+    LuaManager(const LuaManager &) = delete;
+    LuaManager &operator=(const LuaManager &) = delete;
 };

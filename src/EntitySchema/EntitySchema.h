@@ -26,6 +26,6 @@ public:
 private:
     std::string name_;
     std::unordered_map<std::string, std::unique_ptr<FieldSchema>> fields_;
-    std::unordered_map<std::string, EntitySchema *> children_;
     std::unordered_map<std::string, std::unique_ptr<Command>> commands_;
+    std::unordered_map<std::string, EntitySchema *> children_;
 };
