@@ -1,5 +1,6 @@
 #include "ReferenceFieldValue.h"
 #include "EntityManager.h"
+#include <nlohmann/json.hpp>
 
 ReferenceFieldValue::ReferenceFieldValue(const ReferenceFieldSchema &schema)
     : FieldValue(schema), schema_(schema)
@@ -66,4 +67,14 @@ std::string ReferenceFieldValue::toString() const
 bool ReferenceFieldValue::isEmpty() const
 {
     return !referencedId_.has_value();
+}
+
+std::string ReferenceFieldValue::toJson() const
+{
+    nlohmann::json j;
+    if (referencedId_.has_value())
+        j = *referencedId_;
+    else
+        j = nullptr;
+    return j.dump();
 }

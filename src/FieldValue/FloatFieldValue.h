@@ -11,6 +11,7 @@ public:
     std::string toString() const override;
     void validate() const override;
     bool isEmpty() const override;
+    std::string toJson() const override;
 
 private:
     std::optional<float> value_;

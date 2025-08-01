@@ -1,5 +1,6 @@
 #include "FloatFieldValue.h"
 #include <string>
+#include <nlohmann/json.hpp>
 
 FloatFieldValue::FloatFieldValue(const FieldSchema &schema)
     : FieldValue(schema) {}
@@ -33,4 +34,14 @@ void FloatFieldValue::validate() const
 bool FloatFieldValue::isEmpty() const
 {
     return !value_.has_value();
+}
+
+std::string FloatFieldValue::toJson() const
+{
+    nlohmann::json j;
+    if (value_.has_value())
+        j = *value_;
+    else
+        j = nullptr;
+    return j.dump();
 }

@@ -17,6 +17,7 @@ public:
     virtual std::string toString() const = 0;
     virtual void validate() const = 0;
     virtual bool isEmpty() const = 0;
+    virtual std::string toJson() const = 0;
 
 protected:
     const FieldSchema &schema_;

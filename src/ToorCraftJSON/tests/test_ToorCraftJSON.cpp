@@ -256,3 +256,236 @@ fields:
     REQUIRE(resp["status"] == "error");
   }
 }
+TEST_CASE("ToorCraftJSON handles full lifecycle including createEntity with deep nesting")
+{
+  ToorCraftJSON &api = ToorCraftJSON::instance();
+
+  // --- 🏗 Complex Schema Setup with 3-level nesting ---
+  std::unordered_map<std::string, std::string> schemas;
+  schemas["home.yaml"] = R"(
+profile_name: SmartHome
+children:
+  devices:
+    entity: Device
+fields:
+  name:
+    type: string
+    required: true
+  address:
+    type: object
+    fields:
+      city:
+        type: string
+      zipcode:
+        type: integer
+      geo:
+        type: object
+        fields:
+          lat:
+            type: float
+          lng:
+            type: float
+  tags:
+    type: array
+    element:
+      type: object
+      fields:
+        label:
+          type: string
+        meta:
+          type: object
+          fields:
+            color:
+              type: string
+            priority:
+              type: integer
+)";
+
+  schemas["device.yaml"] = R"(
+entity_name: Device
+children:
+  sensors:
+    entity: Sensor
+fields:
+  name:
+    type: string
+    required: true
+  active:
+    type: boolean
+  specs:
+    type: object
+    fields:
+      manufacturer:
+        type: string
+      warranty_years:
+        type: integer
+  ports:
+    type: array
+    element:
+      type: object
+      fields:
+        number:
+          type: integer
+        protocols:
+          type: array
+          element:
+            type: string
+)";
+
+  schemas["sensor.yaml"] = R"(
+entity_name: Sensor
+fields:
+  name:
+    type: string
+    required: true
+  readings:
+    type: array
+    element:
+      type: object
+      fields:
+        timestamp:
+          type: string
+        metrics:
+          type: object
+          fields:
+            value:
+              type: float
+            unit:
+              type: string
+)";
+
+  // ✅ Load schemas first
+  REQUIRE(json::parse(api.loadSchemas(schemas))["status"] == "ok");
+
+  // ✅ Create root SmartHome entity with nested JSON
+  std::unordered_map<std::string, std::string> homePayload = {
+      {"name", "Casa Nova"},
+      {"address", R"({"city": "Madrid", "zipcode": 28001, "geo": {"lat": 40.4168, "lng": -3.7038}})"},
+      {"tags", R"([
+        {"label": "modern", "meta": {"color": "blue", "priority": 1}},
+        {"label": "eco", "meta": {"color": "green", "priority": 2}}
+      ])"}};
+
+  std::string homeResp = api.createEntity("SmartHome", "homeX", "", homePayload);
+  auto homeParsed = json::parse(homeResp);
+  REQUIRE(homeParsed["status"] == "ok");
+  REQUIRE(homeParsed["created"]["id"] == "homeX");
+  REQUIRE(homeParsed["created"]["schema"] == "SmartHome");
+  REQUIRE(homeParsed["created"]["parentId"].is_null());
+
+  // ✅ Verify homeX appears in getRoot
+  auto rootParsed = json::parse(api.getRoot());
+  REQUIRE(rootParsed["status"] == "ok");
+  auto rootIt = std::find_if(rootParsed["root"].begin(), rootParsed["root"].end(),
+                             [](const json &node)
+                             { return node["id"] == "homeX"; });
+  REQUIRE(rootIt != rootParsed["root"].end());
+
+  // ✅ Create Device under homeX with nested object + array of objects
+  std::unordered_map<std::string, std::string> devicePayload = {
+      {"name", "Smart Thermostat"},
+      {"active", "true"},
+      {"specs", R"({"manufacturer": "Nest", "warranty_years": 3})"},
+      {"ports", R"([
+        {"number": 1, "protocols": ["Zigbee", "WiFi"]},
+        {"number": 2, "protocols": ["Bluetooth"]}
+      ])"}};
+
+  std::string deviceResp = api.createEntity("Device", "deviceX", "homeX", devicePayload);
+  auto deviceParsed = json::parse(deviceResp);
+  REQUIRE(deviceParsed["status"] == "ok");
+  REQUIRE(deviceParsed["created"]["id"] == "deviceX");
+  REQUIRE(deviceParsed["created"]["schema"] == "Device");
+  REQUIRE(deviceParsed["created"]["parentId"] == "homeX");
+
+  // ✅ Verify deviceX appears as a child of homeX in tree
+  auto treeParsed = json::parse(api.getTree());
+  REQUIRE(treeParsed["status"] == "ok");
+
+  auto homeNode = std::find_if(treeParsed["tree"].begin(), treeParsed["tree"].end(),
+                               [](const json &n)
+                               { return n["id"] == "homeX"; });
+  REQUIRE(homeNode != treeParsed["tree"].end());
+
+  auto childIt = std::find_if(homeNode->at("children").begin(),
+                              homeNode->at("children").end(),
+                              [](const json &child)
+                              { return child["id"] == "deviceX"; });
+  REQUIRE(childIt != homeNode->at("children").end());
+
+  // ✅ Query the device and check its fields
+  auto queriedDevice = json::parse(api.queryEntity("deviceX"));
+  REQUIRE(queriedDevice["status"] == "ok");
+  REQUIRE(queriedDevice["entity"]["name"] == "Smart Thermostat");
+
+  // ✅ Check nested specs object
+  REQUIRE(queriedDevice["entity"]["specs"].is_object());
+  REQUIRE(queriedDevice["entity"]["specs"]["manufacturer"] == "Nest");
+
+  // ✅ Check deeply nested array-of-objects (ports)
+  REQUIRE(queriedDevice["entity"]["ports"].is_array());
+  REQUIRE(queriedDevice["entity"]["ports"][0]["protocols"].is_array());
+  REQUIRE(queriedDevice["entity"]["ports"][0]["protocols"][0] == "Zigbee");
+}
+
+TEST_CASE("ToorCraftJSON handles enums and references correctly")
+{
+  ToorCraftJSON &api = ToorCraftJSON::instance();
+
+  // --- 🏗 Schema with ENUM and REFERENCE ---
+  std::unordered_map<std::string, std::string> schemas;
+  schemas["user.yaml"] = R"(
+entity_name: User
+fields:
+  name:
+    type: string
+  role:
+    type: enum
+    values: [admin, guest, editor]
+)";
+
+  schemas["post.yaml"] = R"(
+entity_name: Post
+fields:
+  title:
+    type: string
+  author:
+    type: reference
+    target: User
+)";
+
+  // ✅ Load schemas
+  REQUIRE(json::parse(api.loadSchemas(schemas))["status"] == "ok");
+
+  // ✅ Create a user with enum role
+  std::unordered_map<std::string, std::string> userPayload = {
+      {"name", "Alice"},
+      {"role", "admin"}};
+
+  std::string userResp = api.createEntity("User", "user1", "", userPayload);
+  auto userParsed = json::parse(userResp);
+  REQUIRE(userParsed["status"] == "ok");
+  REQUIRE(userParsed["created"]["id"] == "user1");
+  REQUIRE(userParsed["created"]["schema"] == "User");
+
+  // ✅ Create a post that REFERENCES the user
+  std::unordered_map<std::string, std::string> postPayload = {
+      {"title", "My First Post"},
+      {"author", "user1"}};
+
+  std::string postResp = api.createEntity("Post", "post1", "", postPayload);
+  auto postParsed = json::parse(postResp);
+  REQUIRE(postParsed["status"] == "ok");
+  REQUIRE(postParsed["created"]["id"] == "post1");
+  REQUIRE(postParsed["created"]["schema"] == "Post");
+
+  // ✅ Query the user and verify ENUM field serialization
+  auto queriedUser = json::parse(api.queryEntity("user1"));
+  REQUIRE(queriedUser["status"] == "ok");
+  REQUIRE(queriedUser["entity"]["role"] == "admin");
+
+  // ✅ Query the post and verify REFERENCE serialization
+  auto queriedPost = json::parse(api.queryEntity("post1"));
+  REQUIRE(queriedPost["status"] == "ok");
+  REQUIRE(queriedPost["entity"]["author"] == "user1");
+}

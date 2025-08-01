@@ -1,5 +1,8 @@
 #include "Entity.h"
 #include "FieldValueFactory.h" // Use FieldValueFactory, not FieldSchemaFactory
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 Entity::Entity(const EntitySchema &schema)
     : schema_(schema)
@@ -80,4 +83,28 @@ std::unordered_map<std::string, std::string> Entity::getDict() const
         dict[key] = valuePtr->toString();
     }
     return dict;
+}
+
+std::string Entity::getJson() const
+{
+    json entityJson;
+
+    // Always include metadata
+    entityJson["id"] = _id;
+    entityJson["schema"] = schema_.getName();
+    entityJson["parentId"] = _parentId.empty() ? json(nullptr) : json(_parentId);
+
+    // Iterate through fields and convert each to proper JSON
+    for (const auto &pair : fieldValues_)
+    {
+        const std::string &fieldName = pair.first;
+        const auto &fieldValue = pair.second;
+
+        if (fieldValue)
+        {
+            entityJson[fieldName] = json::parse(fieldValue->toJson());
+        }
+    }
+
+    return entityJson.dump(2); // pretty print for readability
 }

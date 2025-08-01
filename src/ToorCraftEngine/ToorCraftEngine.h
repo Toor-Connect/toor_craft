@@ -22,6 +22,11 @@ public:
 
     std::vector<Entity *> getParents() const;
     const std::vector<Entity *> *getChildren(const std::string &parentId) const;
+    std::string getParent(const std::string &entityId) const;
+    void createEntity(const std::string &schemaName,
+                      const std::string &entityId,
+                      const std::string &parentId,
+                      const std::unordered_map<std::string, std::string> &fieldData);
 
 private:
     ToorCraftEngine() = default;

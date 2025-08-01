@@ -15,6 +15,7 @@ public:
     bool isEmpty() const override;
     void addElement(std::unique_ptr<FieldValue> value);
     const std::vector<std::unique_ptr<FieldValue>> &getElements() const { return elements_; }
+    std::string toJson() const override;
 
 private:
     const ArrayFieldSchema &getArraySchema() const

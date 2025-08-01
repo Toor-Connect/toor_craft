@@ -4,6 +4,7 @@
 #include "FieldSchema.h"
 #include <stdexcept>
 #include <sstream>
+#include <nlohmann/json.hpp>
 
 ObjectFieldValue::ObjectFieldValue(const FieldSchema &schema)
     : FieldValue(schema)
@@ -18,7 +19,42 @@ ObjectFieldValue::ObjectFieldValue(const FieldSchema &schema)
 
 void ObjectFieldValue::setValueFromString(const std::string &val)
 {
-    throw std::runtime_error("Cannot assign a raw string value to an object field.");
+    try
+    {
+        nlohmann::json parsed = nlohmann::json::parse(val);
+
+        if (!parsed.is_object())
+        {
+            throw std::runtime_error("ObjectFieldValue expected a JSON object but got: " + val);
+        }
+
+        const auto &objSchema = static_cast<const ObjectFieldSchema &>(getSchema());
+
+        for (auto it = parsed.begin(); it != parsed.end(); ++it)
+        {
+            const std::string &fieldName = it.key();
+            const nlohmann::json &fieldJson = it.value();
+
+            const FieldSchema *fieldSchema = objSchema.getField(fieldName);
+            if (!fieldSchema)
+            {
+                throw std::runtime_error("Unknown field '" + fieldName + "' in object JSON.");
+            }
+
+            std::unique_ptr<FieldValue> fieldValue =
+                FieldValueFactory::instance().create(fieldSchema->getTypeName(), *fieldSchema);
+
+            fieldValue->setValueFromString(fieldJson.dump());
+
+            setFieldValue(fieldName, std::move(fieldValue));
+        }
+
+        validate();
+    }
+    catch (const std::exception &e)
+    {
+        throw std::runtime_error(std::string("Failed to set ObjectFieldValue from string: ") + e.what());
+    }
 }
 
 std::string ObjectFieldValue::toString() const
@@ -33,7 +69,18 @@ std::string ObjectFieldValue::toString() const
             oss << ", ";
         first = false;
 
-        oss << "\"" << pair.first << "\": \"" << pair.second->toString() << "\"";
+        oss << "\"" << pair.first << "\": ";
+
+        const std::string valStr = pair.second->toString();
+
+        if (!valStr.empty() && (valStr.front() == '{' || valStr.front() == '['))
+        {
+            oss << valStr;
+        }
+        else
+        {
+            oss << "\"" << valStr << "\"";
+        }
     }
 
     oss << "}";
@@ -80,11 +127,20 @@ bool ObjectFieldValue::hasFieldValue(const std::string &fieldName) const
 
 bool ObjectFieldValue::isEmpty() const
 {
-    // Consider object empty if ALL its fields are empty
     for (const auto &[name, field] : fieldValues_)
     {
         if (!field->isEmpty())
             return false;
     }
     return true;
+}
+
+std::string ObjectFieldValue::toJson() const
+{
+    nlohmann::json j = nlohmann::json::object();
+    for (const auto &[fieldName, fieldValue] : fieldValues_)
+    {
+        j[fieldName] = nlohmann::json::parse(fieldValue->toJson());
+    }
+    return j.dump();
 }

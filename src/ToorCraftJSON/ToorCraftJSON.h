@@ -22,6 +22,12 @@ public:
     std::string getRoot();
     std::string getChildren(const std::string &entityId);
 
+    std::string getParent(const std::string &entityId);
+    std::string createEntity(const std::string &schemaName,
+                             const std::string &id,
+                             const std::string &parentId,
+                             const std::unordered_map<std::string, std::string> &fieldValues);
+
 private:
     ToorCraftJSON();
     ToorCraftJSON(const ToorCraftJSON &) = delete;

@@ -101,6 +101,10 @@ void EntityManager::addEntity(std::unique_ptr<Entity> entity)
     {
         childrenIndex_[parentId].push_back(ptr);
     }
+    else
+    {
+        parents_.push_back(ptr);
+    }
 }
 
 Entity *EntityManager::getEntityById(const std::string &id) const
@@ -258,15 +262,6 @@ void EntityManager::parseDataBundle(const std::unordered_map<std::string, std::s
             }
 
             addEntity(std::move(entity));
-        }
-    }
-
-    for (auto &pair : entities_)
-    {
-        Entity *ent = pair.second.get();
-        if (ent->getParentId().empty())
-        {
-            parents_.push_back(ent);
         }
     }
 }

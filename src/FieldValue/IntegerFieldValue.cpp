@@ -1,5 +1,6 @@
 #include "IntegerFieldValue.h"
 #include <string>
+#include <nlohmann/json.hpp>
 
 IntegerFieldValue::IntegerFieldValue(const FieldSchema &schema)
     : FieldValue(schema) {}
@@ -33,4 +34,14 @@ void IntegerFieldValue::validate() const
 bool IntegerFieldValue::isEmpty() const
 {
     return !value_.has_value();
+}
+
+std::string IntegerFieldValue::toJson() const
+{
+    nlohmann::json j;
+    if (value_.has_value())
+        j = *value_;
+    else
+        j = nullptr;
+    return j.dump();
 }

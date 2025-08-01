@@ -14,7 +14,7 @@ add_library(FieldValueLib STATIC ${SOURCES})
 
 target_link_libraries(FieldValueLib PUBLIC FieldSchemaLib)
 
-target_link_libraries(FieldValueLib PRIVATE EntityManagerLib FieldValueFactoryLib)
+target_link_libraries(FieldValueLib PRIVATE EntityManagerLib FieldValueFactoryLib yaml-cpp)
 
 target_include_directories(FieldValueLib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

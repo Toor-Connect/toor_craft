@@ -18,6 +18,7 @@ public:
     void setReferencedId(const std::string &id);
 
     std::string toString() const override;
+    std::string toJson() const override;
 
 private:
     const ReferenceFieldSchema &schema_;

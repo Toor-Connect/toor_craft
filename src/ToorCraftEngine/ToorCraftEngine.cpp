@@ -60,3 +60,43 @@ const EntitySchema *ToorCraftEngine::getSchema(const std::string &name) const
     }
     return schema;
 }
+
+std::string ToorCraftEngine::getParent(const std::string &entityId) const
+{
+    Entity *ent = EntityManager::instance().getEntityById(entityId);
+    if (!ent)
+        throw std::runtime_error("Entity not found: " + entityId);
+
+    return ent->getParentId();
+}
+
+void ToorCraftEngine::createEntity(const std::string &schemaName,
+                                   const std::string &entityId,
+                                   const std::string &parentId,
+                                   const std::unordered_map<std::string, std::string> &fieldData)
+{
+    EntitySchema *schema = SchemaManager::instance().getEntitySchema(schemaName);
+    if (!schema)
+        throw std::runtime_error("Schema not found: " + schemaName);
+
+    auto newEntity = std::make_unique<Entity>(*schema);
+    newEntity->setId(entityId);
+
+    if (!parentId.empty())
+        newEntity->setParentId(parentId);
+
+    for (const auto &[fname, fval] : fieldData)
+    {
+        try
+        {
+            newEntity->setFieldValue(fname, fval);
+        }
+        catch (const std::exception &e)
+        {
+            throw std::runtime_error("Error setting field '" + fname + "': " + e.what());
+        }
+    }
+
+    Entity *rawPtr = newEntity.get();
+    EntityManager::instance().addEntity(std::move(newEntity));
+}

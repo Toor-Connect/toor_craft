@@ -76,21 +76,14 @@ std::string ToorCraftJSON::queryEntity(const std::string &id)
         }
 
         result["status"] = "ok";
-        result["entity"]["id"] = entity->getId();
-        result["entity"]["schema"] = entity->getSchema().getName();
-
-        auto dict = entity->getDict();
-        for (const auto &pair : dict)
-        {
-            result["entity"][pair.first] = pair.second;
-        }
+        result["entity"] = json::parse(entity->getJson());
     }
     catch (const std::exception &e)
     {
         result["status"] = "error";
         result["message"] = e.what();
     }
-    return result.dump();
+    return result.dump(2);
 }
 
 std::string ToorCraftJSON::setField(const std::string &entityId, const std::string &fieldName, const std::string &value)
@@ -246,6 +239,72 @@ std::string ToorCraftJSON::getChildren(const std::string &entityId)
         response["status"] = "ok";
         response["entityId"] = entityId;
         response["children"] = childrenArray;
+    }
+    catch (const std::exception &ex)
+    {
+        response["status"] = "error";
+        response["message"] = ex.what();
+    }
+    return response.dump(2);
+}
+
+std::string ToorCraftJSON::getParent(const std::string &entityId)
+{
+    nlohmann::json response;
+    try
+    {
+        Entity *entity = engine_.queryEntity(entityId);
+        if (!entity)
+        {
+            throw std::runtime_error("Entity not found: " + entityId);
+        }
+
+        const std::string &parentId = entity->getParentId();
+        if (parentId.empty())
+        {
+            response["status"] = "ok";
+            response["parent"] = nullptr; // Explicit null for root entities
+        }
+        else
+        {
+            Entity *parent = engine_.queryEntity(parentId);
+            if (!parent)
+            {
+                throw std::runtime_error("Parent entity not found: " + parentId);
+            }
+
+            response["status"] = "ok";
+            response["parent"] = {
+                {"id", parent->getId()},
+                {"schema", parent->getSchema().getName()}};
+        }
+    }
+    catch (const std::exception &ex)
+    {
+        response["status"] = "error";
+        response["message"] = ex.what();
+    }
+    return response.dump(2);
+}
+
+std::string ToorCraftJSON::createEntity(const std::string &schemaName,
+                                        const std::string &id,
+                                        const std::string &parentId,
+                                        const std::unordered_map<std::string, std::string> &fieldValues)
+{
+    nlohmann::json response;
+    try
+    {
+        // delegate the heavy lifting to engine_
+        engine_.createEntity(schemaName, id, parentId, fieldValues);
+
+        response["status"] = "ok";
+        response["created"] = {
+            {"id", id},
+            {"schema", schemaName},
+            {"parentId", parentId.empty()
+                             ? nlohmann::json(nullptr)
+                             : nlohmann::json(parentId)}};
     }
     catch (const std::exception &ex)
     {

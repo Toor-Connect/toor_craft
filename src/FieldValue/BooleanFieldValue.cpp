@@ -1,6 +1,7 @@
 #include "BooleanFieldValue.h"
 #include <algorithm>
 #include <string>
+#include <nlohmann/json.hpp>
 
 BooleanFieldValue::BooleanFieldValue(const FieldSchema &schema)
     : FieldValue(schema) {}
@@ -41,4 +42,14 @@ void BooleanFieldValue::validate() const
 bool BooleanFieldValue::isEmpty() const
 {
     return !value_.has_value();
+}
+
+std::string BooleanFieldValue::toJson() const
+{
+    nlohmann::json j;
+    if (value_.has_value())
+        j = *value_;
+    else
+        j = nullptr;
+    return j.dump();
 }

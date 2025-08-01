@@ -1,11 +1,19 @@
 #include "StringFieldValue.h"
+#include <nlohmann/json.hpp>
 
 StringFieldValue::StringFieldValue(const FieldSchema &schema)
     : FieldValue(schema) {}
 
 void StringFieldValue::setValueFromString(const std::string &val)
 {
-    value_ = val;
+    std::string processed = val;
+
+    if (processed.size() >= 2 && processed.front() == '"' && processed.back() == '"')
+    {
+        processed = processed.substr(1, processed.size() - 2);
+    }
+
+    value_ = processed;
     validate();
 }
 
@@ -22,4 +30,18 @@ void StringFieldValue::validate() const
 bool StringFieldValue::isEmpty() const
 {
     return !value_.has_value() || value_->empty();
+}
+
+std::string StringFieldValue::toJson() const
+{
+    nlohmann::json j;
+    if (value_.has_value())
+    {
+        j = value_.value();
+    }
+    else
+    {
+        j = nullptr;
+    }
+    return j.dump();
 }

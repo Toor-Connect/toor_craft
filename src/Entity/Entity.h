@@ -21,6 +21,7 @@ public:
     void setParentId(const std::string &parentId);
     const std::string &getParentId() const;
     std::unordered_map<std::string, std::string> getDict() const;
+    std::string getJson() const;
 
 private:
     const EntitySchema &schema_;
