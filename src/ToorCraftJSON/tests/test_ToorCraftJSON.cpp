@@ -1,12 +1,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
-#include "ToorCraftAPI.h"
+#include "ToorCraftJSON.h"
 
 using json = nlohmann::json;
 
-TEST_CASE("ToorCraftAPI handles complex schemas, nested data, and JSON responses")
+TEST_CASE("ToorCraftJSON handles complex schemas, nested data, and JSON responses")
 {
-  ToorCraftAPI &api = ToorCraftAPI::instance();
+  ToorCraftJSON &api = ToorCraftJSON::instance();
 
   // --- Complex Schema Setup ---
   std::unordered_map<std::string, std::string> schemas;
@@ -195,9 +195,9 @@ sensor2:
   }
 }
 
-TEST_CASE("ToorCraftAPI handles error cases cleanly")
+TEST_CASE("ToorCraftJSON handles error cases cleanly")
 {
-  ToorCraftAPI &api = ToorCraftAPI::instance();
+  ToorCraftJSON &api = ToorCraftJSON::instance();
 
   SECTION("❌ Loading bad schema returns error JSON")
   {

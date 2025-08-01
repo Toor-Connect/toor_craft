@@ -4,10 +4,10 @@
 
 class ToorCraftEngine;
 
-class ToorCraftAPI
+class ToorCraftJSON
 {
 public:
-    static ToorCraftAPI &instance();
+    static ToorCraftJSON &instance();
 
     std::string loadSchemas(const std::unordered_map<std::string, std::string> &schemas);
     std::string getSchemaList();
@@ -20,9 +20,9 @@ public:
     std::string getTree();
 
 private:
-    ToorCraftAPI();
-    ToorCraftAPI(const ToorCraftAPI &) = delete;
-    ToorCraftAPI &operator=(const ToorCraftAPI &) = delete;
+    ToorCraftJSON();
+    ToorCraftJSON(const ToorCraftJSON &) = delete;
+    ToorCraftJSON &operator=(const ToorCraftJSON &) = delete;
 
     ToorCraftEngine &engine_;
 };

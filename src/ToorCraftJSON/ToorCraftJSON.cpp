@@ -1,4 +1,4 @@
-#include "ToorCraftAPI.h"
+#include "ToorCraftJSON.h"
 #include "ToorCraftEngine.h"
 #include "Entity.h"
 #include "FieldValue.h"
@@ -6,15 +6,15 @@
 
 using json = nlohmann::json;
 
-ToorCraftAPI::ToorCraftAPI() : engine_(ToorCraftEngine::instance()) {}
+ToorCraftJSON::ToorCraftJSON() : engine_(ToorCraftEngine::instance()) {}
 
-ToorCraftAPI &ToorCraftAPI::instance()
+ToorCraftJSON &ToorCraftJSON::instance()
 {
-    static ToorCraftAPI api;
+    static ToorCraftJSON api;
     return api;
 }
 
-std::string ToorCraftAPI::loadSchemas(const std::unordered_map<std::string, std::string> &schemas)
+std::string ToorCraftJSON::loadSchemas(const std::unordered_map<std::string, std::string> &schemas)
 {
     json result;
     try
@@ -30,7 +30,7 @@ std::string ToorCraftAPI::loadSchemas(const std::unordered_map<std::string, std:
     return result.dump();
 }
 
-std::string ToorCraftAPI::getSchemaList()
+std::string ToorCraftJSON::getSchemaList()
 {
     json result;
     try
@@ -47,7 +47,7 @@ std::string ToorCraftAPI::getSchemaList()
     return result.dump();
 }
 
-std::string ToorCraftAPI::loadData(const std::unordered_map<std::string, std::string> &data)
+std::string ToorCraftJSON::loadData(const std::unordered_map<std::string, std::string> &data)
 {
     json result;
     try
@@ -63,7 +63,7 @@ std::string ToorCraftAPI::loadData(const std::unordered_map<std::string, std::st
     return result.dump();
 }
 
-std::string ToorCraftAPI::queryEntity(const std::string &id)
+std::string ToorCraftJSON::queryEntity(const std::string &id)
 {
     json result;
     try
@@ -93,7 +93,7 @@ std::string ToorCraftAPI::queryEntity(const std::string &id)
     return result.dump();
 }
 
-std::string ToorCraftAPI::setField(const std::string &entityId, const std::string &fieldName, const std::string &value)
+std::string ToorCraftJSON::setField(const std::string &entityId, const std::string &fieldName, const std::string &value)
 {
     json result;
     try
@@ -109,7 +109,7 @@ std::string ToorCraftAPI::setField(const std::string &entityId, const std::strin
     return result.dump();
 }
 
-std::string ToorCraftAPI::validateEntity(const std::string &entityId)
+std::string ToorCraftJSON::validateEntity(const std::string &entityId)
 {
     json result;
     try
@@ -125,7 +125,7 @@ std::string ToorCraftAPI::validateEntity(const std::string &entityId)
     return result.dump();
 }
 
-std::string ToorCraftAPI::getTree()
+std::string ToorCraftJSON::getTree()
 {
     json result;
     try
