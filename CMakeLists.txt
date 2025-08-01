@@ -67,4 +67,4 @@ include_directories(${inja_SOURCE_DIR}/third_party/include)
 add_subdirectory(src)
 
 # ✅ Add examples (test/demo executables)
-#add_subdirectory(examples)
+add_subdirectory(examples)

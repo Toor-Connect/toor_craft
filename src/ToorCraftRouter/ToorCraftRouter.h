@@ -4,5 +4,12 @@
 class ToorCraftRouter
 {
 public:
-    static std::string handleRequest(const std::string &jsonRequest);
+    static ToorCraftRouter &instance();
+
+    std::string handleRequest(const std::string &jsonRequest);
+
+private:
+    ToorCraftRouter() = default;
+    ToorCraftRouter(const ToorCraftRouter &) = delete;
+    ToorCraftRouter &operator=(const ToorCraftRouter &) = delete;
 };

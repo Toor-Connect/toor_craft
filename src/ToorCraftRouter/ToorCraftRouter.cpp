@@ -4,6 +4,12 @@
 
 using json = nlohmann::json;
 
+ToorCraftRouter &ToorCraftRouter::instance()
+{
+    static ToorCraftRouter inst;
+    return inst;
+}
+
 std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
 {
     auto &api = ToorCraftJSON::instance();
