@@ -1,0 +1,17 @@
+device1:
+  _schema: Device
+  _parentid: house1
+  name: Thermostat
+  active: true
+  specs:
+    manufacturer: Nest
+    warranty_years: 2
+
+device2:
+  _schema: Device
+  _parentid: house1
+  name: Air Purifier
+  active: false
+  specs:
+    manufacturer: Dyson
+    warranty_years: 3

@@ -1,0 +1,14 @@
+entity_name: Sensor
+fields:
+  name:
+    type: string
+    required: true
+  readings:
+    type: array
+    element:
+      type: object
+      fields:
+        timestamp:
+          type: string
+        value:
+          type: float

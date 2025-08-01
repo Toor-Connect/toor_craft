@@ -1,0 +1,9 @@
+house1:
+  _schema: SmartHome
+  name: Villa Aurora
+  address:
+    city: Barcelona
+    zipcode: 8001
+  tags:
+    - modern
+    - solar-powered

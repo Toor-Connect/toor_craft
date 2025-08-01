@@ -1,0 +1,19 @@
+profile_name: SmartHome
+children:
+  devices:
+    entity: Device
+fields:
+  name:
+    type: string
+    required: true
+  address:
+    type: object
+    fields:
+      city:
+        type: string
+      zipcode:
+        type: integer
+  tags:
+    type: array
+    element:
+      type: string

@@ -1,0 +1,17 @@
+entity_name: Device
+children:
+  sensors:
+    entity: Sensor
+fields:
+  name:
+    type: string
+    required: true
+  active:
+    type: boolean
+  specs:
+    type: object
+    fields:
+      manufacturer:
+        type: string
+      warranty_years:
+        type: integer

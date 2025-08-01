@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
 {
     fs::path schemaDir;
     fs::path dataDir;
+    bool interactive = false;
 
     // --- Parse CLI arguments ---
     for (int i = 1; i < argc; ++i)
@@ -42,6 +43,15 @@ int main(int argc, char *argv[])
         else if (arg == "--data" && i + 1 < argc)
         {
             dataDir = argv[++i];
+        }
+        else if (arg == "--interactive")
+        {
+            interactive = true;
+        }
+        else if (arg == "--help")
+        {
+            std::cout << "Usage: " << argv[0] << " --schemas <path> --data <path> [--interactive]\n";
+            return 0;
         }
     }
 
@@ -75,45 +85,93 @@ int main(int argc, char *argv[])
     // ✅ Load schemas
     nlohmann::json loadSchemasReq;
     loadSchemasReq["command"] = "loadSchemas";
-    loadSchemasReq["payload"] = schemas;
+    loadSchemasReq["schemas"] = schemas;
 
-    std::string schemaResp = router.handleRequest(loadSchemasReq.dump());
-    if (schemaResp.find("\"status\":\"error\"") != std::string::npos)
+    auto schemaRespJson = nlohmann::json::parse(router.handleRequest(loadSchemasReq.dump()));
+    if (schemaRespJson["status"] == "error")
     {
-        std::cerr << schemaResp << std::endl;
+        std::cerr << schemaRespJson.dump(2) << std::endl;
         return 1;
     }
 
     // ✅ Load data
     nlohmann::json loadDataReq;
     loadDataReq["command"] = "loadData";
-    loadDataReq["payload"] = data;
+    loadDataReq["data"] = data;
 
-    std::string dataResp = router.handleRequest(loadDataReq.dump());
-    if (dataResp.find("\"status\":\"error\"") != std::string::npos)
+    auto dataRespJson = nlohmann::json::parse(router.handleRequest(loadDataReq.dump()));
+    if (dataRespJson["status"] == "error")
     {
-        std::cerr << dataResp << std::endl;
+        std::cerr << dataRespJson.dump(2) << std::endl;
         return 1;
     }
 
-    // ✅ Read stdin for runtime commands
-    std::ostringstream buffer;
-    std::string line;
-    while (std::getline(std::cin, line))
+    if (interactive)
     {
-        buffer << line << "\n";
-    }
+        std::cout << "✅ ToorCraft CLI ready. Type JSON commands and press Enter.\n";
+        std::cout << "ℹ️  Type 'help' for example commands, 'exit' to quit.\n";
 
-    std::string input = buffer.str();
-    if (input.empty())
+        std::string line;
+        while (true)
+        {
+            std::cout << "> ";
+            if (!std::getline(std::cin, line))
+                break;
+            if (line == "exit" || line == "quit")
+                break;
+            if (line == "help")
+            {
+                std::cout << R"({
+  "examples": [
+    {"command": "getTree"},
+    {"command": "getSchemaList"},
+    {"command": "queryEntity", "id": "device1"},
+    {"command": "setField", "entityId": "device1", "fieldName": "name", "value": "NewName"},
+    {"command": "validateEntity", "entityId": "device1"}
+  ]
+})" << std::endl;
+                continue;
+            }
+            if (line.empty())
+                continue;
+
+            try
+            {
+                std::string response = router.handleRequest(line);
+
+                // Pretty print response
+                nlohmann::json parsed = nlohmann::json::parse(response);
+                std::cout << parsed.dump(2) << "\n";
+            }
+            catch (const std::exception &ex)
+            {
+                std::cerr << "\033[31m"
+                          << R"({"status":"error","message":")" << ex.what() << "\"}"
+                          << "\033[0m" << std::endl;
+            }
+        }
+    }
+    else
     {
-        std::cerr << R"({"status": "error", "message": "No JSON input provided"})" << std::endl;
-        return 1;
-    }
+        // ✅ Non-interactive: read stdin all at once
+        std::ostringstream buffer;
+        std::string line;
+        while (std::getline(std::cin, line))
+        {
+            buffer << line << "\n";
+        }
 
-    // ✅ Route the request
-    std::string response = router.handleRequest(input);
-    std::cout << response << std::endl;
+        std::string input = buffer.str();
+        if (input.empty())
+        {
+            std::cerr << R"({"status": "error", "message": "No JSON input provided"})" << std::endl;
+            return 1;
+        }
+
+        std::string response = router.handleRequest(input);
+        nlohmann::json parsed = nlohmann::json::parse(response);
+        std::cout << parsed.dump(2) << std::endl;
+    }
 
     return 0;
 }

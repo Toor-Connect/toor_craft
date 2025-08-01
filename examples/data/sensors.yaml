@@ -1,0 +1,17 @@
+sensor1:
+  _schema: Sensor
+  _parentid: device1
+  name: Temperature Sensor
+  readings:
+    - timestamp: "2025-08-01T10:00:00Z"
+      value: 23.5
+    - timestamp: "2025-08-01T11:00:00Z"
+      value: 24.1
+
+sensor2:
+  _schema: Sensor
+  _parentid: device2
+  name: Air Quality Sensor
+  readings:
+    - timestamp: "2025-08-01T10:15:00Z"
+      value: 12.2

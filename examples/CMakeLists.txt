@@ -1,15 +1,16 @@
-add_executable(example_app main.cpp)
+# ✅ Build the CLI executable
+add_executable(toorcraft-cli main.cpp)
 
-target_link_libraries(example_app PRIVATE 
+target_link_libraries(toorcraft-cli PRIVATE 
   ToorCraftRouterLib
   yaml-cpp
 )
 
-# ✅ Emscripten-specific settings
+# ✅ Emscripten-specific settings (optional, only if you want WASM CLI in browser)
 if (CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-    message(STATUS "Compiling example_app for WebAssembly")
+    message(STATUS "Compiling toorcraft-cli for WebAssembly")
 
-    set_target_properties(example_app PROPERTIES
+    set_target_properties(toorcraft-cli PROPERTIES
         LINK_FLAGS "--js-library ${CMAKE_SOURCE_DIR}/wasm/glue.js \
                     -s MODULARIZE=1 \
                     -s EXPORT_ES6=1 \
@@ -26,15 +27,16 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 <html>
 <head>
   <meta charset='UTF-8'>
-  <title>example_app WASM Test</title>
+  <title>toorcraft-cli WASM</title>
 </head>
 <body>
-  <h1>🚀 Running example_app (WASM)</h1>
+  <h1>🚀 Running toorcraft-cli (WASM)</h1>
   <script type='module'>
-    import Module from './example_app.js';
+    import Module from './toorcraft-cli.js';
     Module().then(mod => {
       console.log('✅ WASM Module loaded!');
-      mod.callMain(['/virtual/lua/dir']);
+      // Call CLI entry point (optional args can be passed)
+      mod.callMain(['--schemas', '/virtual/schemas', '--data', '/virtual/data']);
     });
   </script>
 </body>
