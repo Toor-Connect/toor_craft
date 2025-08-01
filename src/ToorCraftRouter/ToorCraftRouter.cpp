@@ -29,15 +29,11 @@ std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
         if (command == "loadSchemas")
         {
             if (!request.contains("schemas") || !request["schemas"].is_object())
-            {
                 throw std::runtime_error("Missing or invalid 'schemas'");
-            }
 
             std::unordered_map<std::string, std::string> schemas;
             for (auto &el : request["schemas"].items())
-            {
                 schemas[el.key()] = el.value().get<std::string>();
-            }
 
             return api.loadSchemas(schemas);
         }
@@ -45,48 +41,65 @@ std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
         {
             return api.getSchemaList();
         }
+        else if (command == "getSchema")
+        {
+            if (!request.contains("schemaName") || !request["schemaName"].is_string())
+                throw std::runtime_error("Missing or invalid 'schemaName'");
 
+            return api.getSchema(request["schemaName"].get<std::string>());
+        }
         else if (command == "loadData")
         {
             if (!request.contains("data") || !request["data"].is_object())
-            {
                 throw std::runtime_error("Missing or invalid 'data'");
-            }
 
             std::unordered_map<std::string, std::string> data;
             for (auto &el : request["data"].items())
-            {
                 data[el.key()] = el.value().get<std::string>();
-            }
 
             return api.loadData(data);
         }
         else if (command == "queryEntity")
         {
-            return api.queryEntity(request.at("id").get<std::string>());
+            if (!request.contains("id") || !request["id"].is_string())
+                throw std::runtime_error("Missing or invalid 'id'");
+
+            return api.queryEntity(request["id"].get<std::string>());
         }
         else if (command == "setField")
         {
+            for (auto key : {"entityId", "fieldName", "value"})
+            {
+                if (!request.contains(key) || !request[key].is_string())
+                    throw std::runtime_error(std::string("Missing or invalid '") + key + "'");
+            }
+
             return api.setField(
-                request.at("entityId").get<std::string>(),
-                request.at("fieldName").get<std::string>(),
-                request.at("value").get<std::string>());
+                request["entityId"].get<std::string>(),
+                request["fieldName"].get<std::string>(),
+                request["value"].get<std::string>());
         }
         else if (command == "validateEntity")
         {
-            return api.validateEntity(request.at("entityId").get<std::string>());
+            if (!request.contains("entityId") || !request["entityId"].is_string())
+                throw std::runtime_error("Missing or invalid 'entityId'");
+
+            return api.validateEntity(request["entityId"].get<std::string>());
         }
         else if (command == "getTree")
         {
             return api.getTree();
         }
-        else if (command == "getSchema")
+        else if (command == "getRoot")
         {
-            if (!request.contains("schemaName") || !request["schemaName"].is_string())
-            {
-                throw std::runtime_error("Missing or invalid 'schemaName'");
-            }
-            return api.getSchema(request["schemaName"].get<std::string>());
+            return api.getRoot();
+        }
+        else if (command == "getChildren")
+        {
+            if (!request.contains("parentId") || !request["parentId"].is_string())
+                throw std::runtime_error("Missing or invalid 'parentId'");
+
+            return api.getChildren(request["parentId"].get<std::string>());
         }
         else
         {
@@ -97,6 +110,6 @@ std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
     {
         response["status"] = "error";
         response["message"] = e.what();
-        return response.dump();
+        return response.dump(2);
     }
 }

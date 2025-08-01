@@ -19,6 +19,8 @@ public:
     std::string validateEntity(const std::string &entityId);
 
     std::string getTree();
+    std::string getRoot();
+    std::string getChildren(const std::string &entityId);
 
 private:
     ToorCraftJSON();

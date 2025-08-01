@@ -125,43 +125,6 @@ std::string ToorCraftJSON::validateEntity(const std::string &entityId)
     return result.dump();
 }
 
-std::string ToorCraftJSON::getTree()
-{
-    json result;
-    try
-    {
-        auto parents = engine_.getParents();
-        result["status"] = "ok";
-        json tree = json::array();
-
-        for (auto *parent : parents)
-        {
-            json parentNode;
-            parentNode["id"] = parent->getId();
-            parentNode["schema"] = parent->getSchema().getName();
-            parentNode["children"] = json::array();
-
-            const auto *children = engine_.getChildren(parent->getId());
-            if (children)
-            {
-                for (auto *child : *children)
-                {
-                    parentNode["children"].push_back(child->getId());
-                }
-            }
-            tree.push_back(parentNode);
-        }
-
-        result["tree"] = tree;
-    }
-    catch (const std::exception &e)
-    {
-        result["status"] = "error";
-        result["message"] = e.what();
-    }
-    return result.dump();
-}
-
 std::string ToorCraftJSON::getSchema(const std::string &schemaName)
 {
     nlohmann::json response;
@@ -185,5 +148,109 @@ std::string ToorCraftJSON::getSchema(const std::string &schemaName)
         response["message"] = ex.what();
     }
 
+    return response.dump(2);
+}
+
+std::string ToorCraftJSON::getTree()
+{
+    json response;
+    try
+    {
+        auto parents = engine_.getParents();
+
+        json tree = json::array();
+        for (auto *parent : parents)
+        {
+            json node;
+            node["id"] = parent->getId();
+            node["schema"] = parent->getSchema().getName();
+
+            std::function<json(const Entity *)> collect;
+            collect = [&](const Entity *entity) -> json
+            {
+                json children = json::array();
+                auto *kids = engine_.getChildren(entity->getId());
+                if (kids)
+                {
+                    for (auto *child : *kids)
+                    {
+                        json childNode;
+                        childNode["id"] = child->getId();
+                        childNode["schema"] = child->getSchema().getName();
+                        childNode["children"] = collect(child); // recursion
+                        children.push_back(childNode);
+                    }
+                }
+                return children;
+            };
+
+            node["children"] = collect(parent);
+            tree.push_back(node);
+        }
+
+        response["status"] = "ok";
+        response["tree"] = tree;
+    }
+    catch (const std::exception &ex)
+    {
+        response["status"] = "error";
+        response["message"] = ex.what();
+    }
+    return response.dump(2);
+}
+
+std::string ToorCraftJSON::getRoot()
+{
+    json response;
+    try
+    {
+        auto parents = engine_.getParents();
+        json rootArray = json::array();
+
+        for (auto *parent : parents)
+        {
+            rootArray.push_back({{"id", parent->getId()},
+                                 {"schema", parent->getSchema().getName()}});
+        }
+
+        response["status"] = "ok";
+        response["root"] = rootArray;
+    }
+    catch (const std::exception &ex)
+    {
+        response["status"] = "error";
+        response["message"] = ex.what();
+    }
+    return response.dump(2);
+}
+
+std::string ToorCraftJSON::getChildren(const std::string &entityId)
+{
+    json response;
+    try
+    {
+        auto *children = engine_.getChildren(entityId);
+
+        if (!children)
+        {
+            throw std::runtime_error("Entity '" + entityId + "' has no children or does not exist");
+        }
+
+        json childrenArray = json::array();
+        for (auto *child : *children)
+        {
+            childrenArray.push_back({{"id", child->getId()},
+                                     {"schema", child->getSchema().getName()}});
+        }
+
+        response["status"] = "ok";
+        response["entityId"] = entityId;
+        response["children"] = childrenArray;
+    }
+    catch (const std::exception &ex)
+    {
+        response["status"] = "error";
+        response["message"] = ex.what();
+    }
     return response.dump(2);
 }

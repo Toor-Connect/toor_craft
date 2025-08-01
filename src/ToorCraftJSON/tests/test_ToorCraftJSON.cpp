@@ -75,7 +75,7 @@ fields:
     auto parsed = json::parse(resp);
     REQUIRE(parsed["status"] == "ok");
 
-    // Check schema listing
+    // ✅ Check schema listing
     std::string listResp = api.getSchemaList();
     auto list = json::parse(listResp);
     REQUIRE(list["status"] == "ok");
@@ -139,11 +139,8 @@ sensor2:
 
   SECTION("✅ Loading data bundle works")
   {
-    std::string resp = api.loadSchemas(schemas);
-    REQUIRE(json::parse(resp)["status"] == "ok");
-
-    std::string dataResp = api.loadData(data);
-    REQUIRE(json::parse(dataResp)["status"] == "ok");
+    REQUIRE(json::parse(api.loadSchemas(schemas))["status"] == "ok");
+    REQUIRE(json::parse(api.loadData(data))["status"] == "ok");
   }
 
   SECTION("✅ Querying entity returns JSON")
@@ -156,7 +153,7 @@ sensor2:
 
     REQUIRE(parsed["status"] == "ok");
     REQUIRE(parsed["entity"]["name"] == "Villa Aurora");
-    // ✅ Wrap OR expression
+    // ✅ FIX: wrap OR expression to avoid Catch2 static assert
     REQUIRE((parsed["entity"]["address"].is_string() || parsed["entity"]["address"].is_object()));
   }
 
@@ -165,16 +162,14 @@ sensor2:
     api.loadSchemas(schemas);
     api.loadData(data);
 
-    std::string setResp = api.setField("device1", "name", "ThermoX");
-    REQUIRE(json::parse(setResp)["status"] == "ok");
+    REQUIRE(json::parse(api.setField("device1", "name", "ThermoX"))["status"] == "ok");
 
-    // Query again to confirm update
+    // ✅ Confirm update
     auto parsed = json::parse(api.queryEntity("device1"));
     REQUIRE(parsed["entity"]["name"] == "ThermoX");
 
-    // Validation should pass (required fields are present)
-    std::string validateResp = api.validateEntity("device1");
-    REQUIRE(json::parse(validateResp)["status"] == "ok");
+    // ✅ Validate entity (should pass)
+    REQUIRE(json::parse(api.validateEntity("device1"))["status"] == "ok");
   }
 
   SECTION("✅ getTree returns parent-child structure")
@@ -186,12 +181,20 @@ sensor2:
     REQUIRE(treeResp["status"] == "ok");
     REQUIRE(treeResp["tree"].is_array());
 
-    // find home1
+    // ✅ Find home1
     auto homeNode = std::find_if(treeResp["tree"].begin(), treeResp["tree"].end(),
                                  [](const json &n)
                                  { return n["id"] == "home1"; });
     REQUIRE(homeNode != treeResp["tree"].end());
-    REQUIRE(std::find(homeNode->at("children").begin(), homeNode->at("children").end(), "device1") != homeNode->at("children").end());
+
+    // ✅ Check that one of the children has id == "device1"
+    auto childIt = std::find_if(homeNode->at("children").begin(),
+                                homeNode->at("children").end(),
+                                [](const json &child)
+                                {
+                                  return child["id"] == "device1";
+                                });
+    REQUIRE(childIt != homeNode->at("children").end());
   }
 }
 
