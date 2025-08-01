@@ -237,7 +237,7 @@ std::string ToorCraftJSON::getChildren(const std::string &entityId)
         }
 
         response["status"] = "ok";
-        response["entityId"] = entityId;
+        response["id"] = entityId;
         response["children"] = childrenArray;
     }
     catch (const std::exception &ex)

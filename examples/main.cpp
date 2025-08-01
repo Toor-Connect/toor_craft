@@ -126,8 +126,8 @@ int main(int argc, char *argv[])
     {"command": "getTree"},
     {"command": "getSchemaList"},
     {"command": "queryEntity", "id": "device1"},
-    {"command": "setField", "entityId": "device1", "fieldName": "name", "value": "NewName"},
-    {"command": "validateEntity", "entityId": "device1"}
+    {"command": "setField", "id": "device1", "field": "name", "value": "NewName"},
+    {"command": "validateEntity", "id": "device1"}
   ]
 })" << std::endl;
                 continue;

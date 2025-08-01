@@ -68,23 +68,23 @@ std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
         }
         else if (command == "setField")
         {
-            for (auto key : {"entityId", "fieldName", "value"})
+            for (auto key : {"id", "field", "value"})
             {
                 if (!request.contains(key) || !request[key].is_string())
                     throw std::runtime_error(std::string("Missing or invalid '") + key + "'");
             }
 
             return api.setField(
-                request["entityId"].get<std::string>(),
-                request["fieldName"].get<std::string>(),
+                request["id"].get<std::string>(),
+                request["field"].get<std::string>(),
                 request["value"].get<std::string>());
         }
         else if (command == "validateEntity")
         {
-            if (!request.contains("entityId") || !request["entityId"].is_string())
+            if (!request.contains("id") || !request["id"].is_string())
                 throw std::runtime_error("Missing or invalid 'entityId'");
 
-            return api.validateEntity(request["entityId"].get<std::string>());
+            return api.validateEntity(request["id"].get<std::string>());
         }
         else if (command == "getTree")
         {
@@ -105,13 +105,13 @@ std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
         {
             if (!request.contains("schemaName") || !request["schemaName"].is_string())
                 throw std::runtime_error("Missing or invalid 'schemaName'");
-            if (!request.contains("entityId") || !request["entityId"].is_string())
+            if (!request.contains("id") || !request["id"].is_string())
                 throw std::runtime_error("Missing or invalid 'entityId'");
             if (!request.contains("payload") || !request["payload"].is_object())
                 throw std::runtime_error("Missing or invalid 'payload'");
 
             std::string schemaName = request["schemaName"].get<std::string>();
-            std::string entityId = request["entityId"].get<std::string>();
+            std::string entityId = request["id"].get<std::string>();
             std::string parentId = request.contains("parentId") && request["parentId"].is_string()
                                        ? request["parentId"].get<std::string>()
                                        : "";
@@ -124,10 +124,10 @@ std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
         }
         else if (command == "getParent")
         {
-            if (!request.contains("entityId") || !request["entityId"].is_string())
+            if (!request.contains("id") || !request["id"].is_string())
                 throw std::runtime_error("Missing or invalid 'entityId'");
 
-            return api.getParent(request["entityId"].get<std::string>());
+            return api.getParent(request["id"].get<std::string>());
         }
         else
         {

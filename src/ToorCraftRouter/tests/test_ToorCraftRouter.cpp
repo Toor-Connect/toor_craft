@@ -94,8 +94,8 @@ device1:
   // --- 6️⃣ setField ---
   json setReq = {
       {"command", "setField"},
-      {"entityId", "device1"},
-      {"fieldName", "name"},
+      {"id", "device1"},
+      {"field", "name"},
       {"value", "ThermoX"}};
   auto setResp = json::parse(router.handleRequest(setReq.dump()));
   REQUIRE(setResp["status"] == "ok");
@@ -105,7 +105,7 @@ device1:
   REQUIRE(updated["entity"]["name"] == "ThermoX");
 
   // --- 7️⃣ validateEntity ---
-  json validateReq = {{"command", "validateEntity"}, {"entityId", "device1"}};
+  json validateReq = {{"command", "validateEntity"}, {"id", "device1"}};
   auto validResp = json::parse(router.handleRequest(validateReq.dump()));
   REQUIRE(validResp["status"] == "ok");
 
@@ -172,8 +172,8 @@ fields:
 
   json setReq = {
       {"command", "setField"},
-      {"entityId", "ghost"},
-      {"fieldName", "name"},
+      {"id", "ghost"},
+      {"field", "name"},
       {"value", "fail"}};
   auto setResp = json::parse(router.handleRequest(setReq.dump()));
   REQUIRE(setResp["status"] == "error");
@@ -210,7 +210,7 @@ fields:
   json homeCreate = {
       {"command", "createEntity"},
       {"schemaName", "SmartHome"},
-      {"entityId", "homeZ"},
+      {"id", "homeZ"},
       {"payload", {{"name", "Villa Nova"}}}};
   auto homeResp = json::parse(router.handleRequest(homeCreate.dump()));
   REQUIRE(homeResp["status"] == "ok");
@@ -222,7 +222,7 @@ fields:
   json deviceCreate = {
       {"command", "createEntity"},
       {"schemaName", "Device"},
-      {"entityId", "deviceZ"},
+      {"id", "deviceZ"},
       {"parentId", "homeZ"},
       {"payload", {{"name", "Thermo Deluxe"}}}};
   auto deviceResp = json::parse(router.handleRequest(deviceCreate.dump()));
@@ -234,7 +234,7 @@ fields:
   // --- 4️⃣ getParent for deviceZ ---
   json parentReq = {
       {"command", "getParent"},
-      {"entityId", "deviceZ"}};
+      {"id", "deviceZ"}};
   auto parentResp = json::parse(router.handleRequest(parentReq.dump()));
   REQUIRE(parentResp["status"] == "ok");
   REQUIRE(parentResp["parent"]["id"] == "homeZ");
@@ -243,7 +243,7 @@ fields:
   // ✅ Also check that getParent on a root entity returns null parent
   json parentRootReq = {
       {"command", "getParent"},
-      {"entityId", "homeZ"}};
+      {"id", "homeZ"}};
   auto parentRootResp = json::parse(router.handleRequest(parentRootReq.dump()));
   REQUIRE(parentRootResp["status"] == "ok");
   REQUIRE(parentRootResp["parent"].is_null());
