@@ -52,7 +52,8 @@
         "ranges": "cpp",
         "span": "cpp",
         "regex": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "chrono": "cpp"
     },
     "editor.formatOnSave": true,
     "cmake.ctest.debugLaunchTarget": "DebugTest",

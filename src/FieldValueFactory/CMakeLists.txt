@@ -5,7 +5,7 @@ set(SOURCES
 
 add_library(FieldValueFactoryLib STATIC ${SOURCES})
 
-target_link_libraries(FieldValueFactoryLib PUBLIC FieldSchemaLib FieldValueLib)
+target_link_libraries(FieldValueFactoryLib PUBLIC FieldSchemaFactoryLib FieldValueLib)
 
 target_include_directories(FieldValueFactoryLib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

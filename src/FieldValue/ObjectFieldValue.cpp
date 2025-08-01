@@ -1,11 +1,20 @@
 #include "ObjectFieldValue.h"
 #include "ObjectFieldSchema.h"
+#include "FieldValueFactory.h"
 #include "FieldSchema.h"
 #include <stdexcept>
 #include <sstream>
 
 ObjectFieldValue::ObjectFieldValue(const FieldSchema &schema)
-    : FieldValue(schema) {}
+    : FieldValue(schema)
+{
+    const auto &objSchema = static_cast<const ObjectFieldSchema &>(schema);
+    for (const auto &[fieldName, fieldSchemaPtr] : objSchema.getFields())
+    {
+        auto value = FieldValueFactory::instance().create(fieldSchemaPtr->getTypeName(), *fieldSchemaPtr);
+        fieldValues_.emplace(fieldName, std::move(value));
+    }
+}
 
 bool ObjectFieldValue::setValueFromString(const std::string &val, std::string &error)
 {
@@ -16,7 +25,6 @@ bool ObjectFieldValue::setValueFromString(const std::string &val, std::string &e
 
 std::string ObjectFieldValue::toString() const
 {
-    // ✅ Serialize the stored field values into a JSON-like string for debugging
     std::ostringstream oss;
     oss << "{";
 
