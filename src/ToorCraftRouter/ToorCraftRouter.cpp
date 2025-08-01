@@ -101,6 +101,34 @@ std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
 
             return api.getChildren(request["parentId"].get<std::string>());
         }
+        else if (command == "createEntity")
+        {
+            if (!request.contains("schemaName") || !request["schemaName"].is_string())
+                throw std::runtime_error("Missing or invalid 'schemaName'");
+            if (!request.contains("entityId") || !request["entityId"].is_string())
+                throw std::runtime_error("Missing or invalid 'entityId'");
+            if (!request.contains("payload") || !request["payload"].is_object())
+                throw std::runtime_error("Missing or invalid 'payload'");
+
+            std::string schemaName = request["schemaName"].get<std::string>();
+            std::string entityId = request["entityId"].get<std::string>();
+            std::string parentId = request.contains("parentId") && request["parentId"].is_string()
+                                       ? request["parentId"].get<std::string>()
+                                       : "";
+
+            std::unordered_map<std::string, std::string> payload;
+            for (auto &el : request["payload"].items())
+                payload[el.key()] = el.value().dump(); // 🔑 Serialize objects/arrays as strings
+
+            return api.createEntity(schemaName, entityId, parentId, payload);
+        }
+        else if (command == "getParent")
+        {
+            if (!request.contains("entityId") || !request["entityId"].is_string())
+                throw std::runtime_error("Missing or invalid 'entityId'");
+
+            return api.getParent(request["entityId"].get<std::string>());
+        }
         else
         {
             throw std::runtime_error("Unknown command: " + command);

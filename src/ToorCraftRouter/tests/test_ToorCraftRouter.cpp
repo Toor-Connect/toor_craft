@@ -179,3 +179,72 @@ fields:
   REQUIRE(setResp["status"] == "error");
   REQUIRE(setResp["message"].is_string());
 }
+
+TEST_CASE("ToorCraftRouter supports createEntity and getParent")
+{
+  auto &router = ToorCraftRouter::instance();
+
+  // --- 1️⃣ Load schema ---
+  json schemaReq = {
+      {"command", "loadSchemas"},
+      {"schemas", {{"home.yaml", R"(
+profile_name: SmartHome
+children:
+  devices:
+    entity: Device
+fields:
+  name:
+    type: string
+)"},
+                   {"device.yaml", R"(
+entity_name: Device
+fields:
+  name:
+    type: string
+    required: true
+)"}}}};
+
+  REQUIRE(json::parse(router.handleRequest(schemaReq.dump()))["status"] == "ok");
+
+  // --- 2️⃣ createEntity (root) ---
+  json homeCreate = {
+      {"command", "createEntity"},
+      {"schemaName", "SmartHome"},
+      {"entityId", "homeZ"},
+      {"payload", {{"name", "Villa Nova"}}}};
+  auto homeResp = json::parse(router.handleRequest(homeCreate.dump()));
+  REQUIRE(homeResp["status"] == "ok");
+  REQUIRE(homeResp["created"]["id"] == "homeZ");
+  REQUIRE(homeResp["created"]["schema"] == "SmartHome");
+  REQUIRE(homeResp["created"]["parentId"].is_null());
+
+  // --- 3️⃣ createEntity (child of homeZ) ---
+  json deviceCreate = {
+      {"command", "createEntity"},
+      {"schemaName", "Device"},
+      {"entityId", "deviceZ"},
+      {"parentId", "homeZ"},
+      {"payload", {{"name", "Thermo Deluxe"}}}};
+  auto deviceResp = json::parse(router.handleRequest(deviceCreate.dump()));
+  REQUIRE(deviceResp["status"] == "ok");
+  REQUIRE(deviceResp["created"]["id"] == "deviceZ");
+  REQUIRE(deviceResp["created"]["schema"] == "Device");
+  REQUIRE(deviceResp["created"]["parentId"] == "homeZ");
+
+  // --- 4️⃣ getParent for deviceZ ---
+  json parentReq = {
+      {"command", "getParent"},
+      {"entityId", "deviceZ"}};
+  auto parentResp = json::parse(router.handleRequest(parentReq.dump()));
+  REQUIRE(parentResp["status"] == "ok");
+  REQUIRE(parentResp["parent"]["id"] == "homeZ");
+  REQUIRE(parentResp["parent"]["schema"] == "SmartHome");
+
+  // ✅ Also check that getParent on a root entity returns null parent
+  json parentRootReq = {
+      {"command", "getParent"},
+      {"entityId", "homeZ"}};
+  auto parentRootResp = json::parse(router.handleRequest(parentRootReq.dump()));
+  REQUIRE(parentRootResp["status"] == "ok");
+  REQUIRE(parentRootResp["parent"].is_null());
+}
