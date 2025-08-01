@@ -1,5 +1,6 @@
 #include "FloatFieldSchema.h"
 #include <charconv>
+#include <nlohmann/json.hpp>
 
 class FloatRangeRuleSchema : public FieldRuleSchema
 {
@@ -51,4 +52,18 @@ FloatFieldSchema::FloatFieldSchema(FloatFieldSchemaConfig config)
 {
 
     addRule(std::make_unique<FloatRangeRuleSchema>(minValue_, maxValue_));
+}
+
+std::string FloatFieldSchema::toJson() const
+{
+    nlohmann::json j;
+    j["type"] = "float";
+    if (minValue_)
+        j["min"] = *minValue_;
+    if (maxValue_)
+        j["max"] = *maxValue_;
+    j["required"] = isRequired();
+    if (getAlias())
+        j["alias"] = *getAlias();
+    return j.dump();
 }

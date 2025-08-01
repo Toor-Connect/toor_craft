@@ -9,9 +9,10 @@ struct ReferenceFieldSchemaConfig : FieldSchemaConfig
 class ReferenceFieldSchema : public FieldSchema
 {
 public:
-    explicit ReferenceFieldSchema(ReferenceFieldSchemaConfig config); // ✅ pass by value
+    explicit ReferenceFieldSchema(ReferenceFieldSchemaConfig config);
     std::string getTypeName() const override { return "reference"; }
     const std::string &getTargetEntityName() const { return targetEntityName_; }
+    std::string toJson() const override;
 
 private:
     std::string targetEntityName_;

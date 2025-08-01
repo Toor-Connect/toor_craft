@@ -50,3 +50,13 @@ const std::vector<Entity *> *ToorCraftEngine::getChildren(const std::string &par
 {
     return EntityManager::instance().getChildren(parentId);
 }
+
+const EntitySchema *ToorCraftEngine::getSchema(const std::string &name) const
+{
+    EntitySchema *schema = SchemaManager::instance().getEntitySchema(name);
+    if (!schema)
+    {
+        throw std::runtime_error("Schema '" + name + "' not found");
+    }
+    return schema;
+}

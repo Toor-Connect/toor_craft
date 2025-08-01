@@ -18,6 +18,7 @@ public:
 
     const std::optional<int64_t> &getMinValue() const { return minValue_; }
     const std::optional<int64_t> &getMaxValue() const { return maxValue_; }
+    std::string toJson() const override;
 
 private:
     std::optional<int64_t> minValue_;

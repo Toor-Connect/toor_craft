@@ -161,3 +161,29 @@ std::string ToorCraftJSON::getTree()
     }
     return result.dump();
 }
+
+std::string ToorCraftJSON::getSchema(const std::string &schemaName)
+{
+    nlohmann::json response;
+
+    try
+    {
+        const EntitySchema *schema = engine_.getSchema(schemaName);
+        if (!schema)
+        {
+            throw std::runtime_error("Schema not found: " + schemaName);
+        }
+
+        nlohmann::json schemaJson = nlohmann::json::parse(schema->toJson());
+
+        response["status"] = "ok";
+        response["schema"] = schemaJson;
+    }
+    catch (const std::exception &ex)
+    {
+        response["status"] = "error";
+        response["message"] = ex.what();
+    }
+
+    return response.dump(2);
+}

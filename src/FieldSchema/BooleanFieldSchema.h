@@ -11,4 +11,6 @@ public:
     explicit BooleanFieldSchema(BooleanFieldSchemaConfig config);
 
     std::string getTypeName() const override { return "boolean"; }
+
+    std::string toJson() const override;
 };

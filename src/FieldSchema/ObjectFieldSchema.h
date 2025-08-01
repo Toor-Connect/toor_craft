@@ -19,6 +19,7 @@ public:
 
     const FieldSchema *getField(const std::string &name) const;
     const std::unordered_map<std::string, std::unique_ptr<FieldSchema>> &getFields() const { return fields_; }
+    std::string toJson() const override;
 
     std::vector<std::string> getFieldNames() const;
 

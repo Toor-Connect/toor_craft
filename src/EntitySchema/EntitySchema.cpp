@@ -1,4 +1,5 @@
 #include "EntitySchema.h"
+#include <nlohmann/json.hpp>
 
 EntitySchema::EntitySchema(std::string name)
     : name_(std::move(name)) {}
@@ -75,4 +76,37 @@ std::vector<std::string> EntitySchema::getCommandNames() const
         names.push_back(pair.first);
     }
     return names;
+}
+
+std::string EntitySchema::toJson() const
+{
+    nlohmann::json j;
+    j["name"] = name_;
+
+    nlohmann::json fieldsJson = nlohmann::json::object();
+    for (const auto &pair : fields_)
+    {
+        fieldsJson[pair.first] = nlohmann::json::parse(pair.second->toJson());
+    }
+    j["fields"] = fieldsJson;
+
+    nlohmann::json childrenJson = nlohmann::json::object();
+    for (const auto &pair : children_)
+    {
+        if (pair.second)
+            childrenJson[pair.first] = pair.second->getName();
+    }
+    j["children"] = childrenJson;
+
+    if (!commands_.empty())
+    {
+        nlohmann::json commandsJson = nlohmann::json::array();
+        for (const auto &pair : commands_)
+        {
+            commandsJson.push_back(pair.first);
+        }
+        j["commands"] = commandsJson;
+    }
+
+    return j.dump();
 }

@@ -22,6 +22,7 @@ public:
     Command *getCommand(const std::string &commandId) const;
     const std::unordered_map<std::string, std::unique_ptr<Command>> &getCommands() const;
     std::vector<std::string> getCommandNames() const;
+    std::string toJson() const;
 
 private:
     std::string name_;

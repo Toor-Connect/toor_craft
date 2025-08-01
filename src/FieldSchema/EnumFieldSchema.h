@@ -15,6 +15,7 @@ public:
 
     std::string getTypeName() const override { return "enum"; }
     const std::vector<std::string> &getAllowedValues() const { return allowedValues_; }
+    std::string toJson() const override;
 
 private:
     std::vector<std::string> allowedValues_;

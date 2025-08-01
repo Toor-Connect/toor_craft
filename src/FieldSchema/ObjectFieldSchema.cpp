@@ -1,4 +1,5 @@
 #include "ObjectFieldSchema.h"
+#include <nlohmann/json.hpp>
 
 ObjectFieldSchema::ObjectFieldSchema(ObjectFieldSchemaConfig config)
     : FieldSchema(std::move(config))
@@ -30,4 +31,22 @@ std::vector<std::string> ObjectFieldSchema::getFieldNames() const
         names.push_back(pair.first);
     }
     return names;
+}
+
+std::string ObjectFieldSchema::toJson() const
+{
+    nlohmann::json j;
+    j["type"] = "object";
+    j["required"] = isRequired();
+    if (getAlias())
+        j["alias"] = *getAlias();
+
+    nlohmann::json fieldsJson = nlohmann::json::object();
+    for (const auto &pair : fields_)
+    {
+        fieldsJson[pair.first] = nlohmann::json::parse(pair.second->toJson());
+    }
+
+    j["fields"] = fieldsJson;
+    return j.dump();
 }

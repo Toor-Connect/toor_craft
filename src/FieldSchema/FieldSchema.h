@@ -63,6 +63,8 @@ public:
         }
     }
 
+    virtual std::string toJson() const = 0;
+
 protected:
     std::string name_;
     bool required_;

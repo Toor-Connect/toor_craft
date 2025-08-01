@@ -80,6 +80,14 @@ std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
         {
             return api.getTree();
         }
+        else if (command == "getSchema")
+        {
+            if (!request.contains("schemaName") || !request["schemaName"].is_string())
+            {
+                throw std::runtime_error("Missing or invalid 'schemaName'");
+            }
+            return api.getSchema(request["schemaName"].get<std::string>());
+        }
         else
         {
             throw std::runtime_error("Unknown command: " + command);

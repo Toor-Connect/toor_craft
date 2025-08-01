@@ -13,6 +13,7 @@ public:
     explicit ArrayFieldSchema(ArrayFieldSchemaConfig &&config);
     std::string getTypeName() const override { return "array"; }
     const FieldSchema &getElementSchema() const { return *elementSchema_; }
+    std::string toJson() const override;
 
 private:
     std::unique_ptr<FieldSchema> elementSchema_;

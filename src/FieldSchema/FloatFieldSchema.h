@@ -18,6 +18,7 @@ public:
 
     const std::optional<double> &getMinValue() const { return minValue_; }
     const std::optional<double> &getMaxValue() const { return maxValue_; }
+    std::string toJson() const override;
 
 private:
     std::optional<double> minValue_;

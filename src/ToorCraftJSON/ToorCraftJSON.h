@@ -11,6 +11,7 @@ public:
 
     std::string loadSchemas(const std::unordered_map<std::string, std::string> &schemas);
     std::string getSchemaList();
+    std::string getSchema(const std::string &schemaName);
 
     std::string loadData(const std::unordered_map<std::string, std::string> &data);
     std::string queryEntity(const std::string &id);

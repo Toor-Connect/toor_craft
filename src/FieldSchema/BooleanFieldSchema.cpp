@@ -1,6 +1,7 @@
 #include "BooleanFieldSchema.h"
 #include <vector>
 #include <algorithm>
+#include <nlohmann/json.hpp>
 
 class BooleanRuleSchema : public FieldRuleSchema
 {
@@ -23,4 +24,16 @@ public:
 BooleanFieldSchema::BooleanFieldSchema(BooleanFieldSchemaConfig config)
     : FieldSchema(std::move(config))
 {
+}
+
+std::string BooleanFieldSchema::toJson() const
+{
+    nlohmann::json j;
+    j["type"] = getTypeName();
+    j["required"] = isRequired();
+    if (alias_)
+    {
+        j["alias"] = *alias_;
+    }
+    return j.dump();
 }

@@ -1,5 +1,6 @@
 #include "EnumFieldSchema.h"
 #include <algorithm>
+#include <nlohmann/json.hpp>
 
 class EnumRuleSchema : public FieldRuleSchema
 {
@@ -27,4 +28,17 @@ EnumFieldSchema::EnumFieldSchema(EnumFieldSchemaConfig config)
     : FieldSchema(std::move(config)),
       allowedValues_(std::move(config.allowedValues))
 {
+}
+
+std::string EnumFieldSchema::toJson() const
+{
+    nlohmann::json j;
+    j["type"] = getTypeName();
+    j["required"] = isRequired();
+    if (alias_)
+    {
+        j["alias"] = *alias_;
+    }
+    j["allowedValues"] = allowedValues_;
+    return j.dump();
 }

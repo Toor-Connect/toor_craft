@@ -1,5 +1,6 @@
 #include "IntegerFieldSchema.h"
 #include <charconv>
+#include <nlohmann/json.hpp>
 
 class IntegerRangeRuleSchema : public FieldRuleSchema
 {
@@ -58,4 +59,18 @@ IntegerFieldSchema::IntegerFieldSchema(IntegerFieldSchemaConfig config)
 {
 
     addRule(std::make_unique<IntegerRangeRuleSchema>(minValue_, maxValue_));
+}
+
+std::string IntegerFieldSchema::toJson() const
+{
+    nlohmann::json j;
+    j["type"] = "integer";
+    if (minValue_)
+        j["min"] = *minValue_;
+    if (maxValue_)
+        j["max"] = *maxValue_;
+    j["required"] = isRequired();
+    if (getAlias())
+        j["alias"] = *getAlias();
+    return j.dump();
 }

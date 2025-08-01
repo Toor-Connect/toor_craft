@@ -13,6 +13,7 @@ public:
 
     void loadSchemas(const std::unordered_map<std::string, std::string> &schemas);
     std::vector<std::string> getSchemaList() const;
+    const EntitySchema *getSchema(const std::string &name) const;
 
     void loadData(const std::unordered_map<std::string, std::string> &data);
     Entity *queryEntity(const std::string &id) const;
