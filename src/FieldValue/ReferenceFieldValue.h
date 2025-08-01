@@ -5,20 +5,21 @@
 #include <string>
 #include <optional>
 
-class ReferenceFieldValue : public FieldValue {
+class ReferenceFieldValue : public FieldValue
+{
 public:
-    explicit ReferenceFieldValue(const ReferenceFieldSchema& schema);
+    explicit ReferenceFieldValue(const ReferenceFieldSchema &schema);
 
-    bool setValueFromString(const std::string& value, std::string& error) override;
-    bool validate(std::string& error) const override;
+    void setValueFromString(const std::string &value) override;
+    void validate() const override;
+    bool isEmpty() const override;
 
-    // Get and set the referenced entity ID
-    const std::optional<std::string>& getReferencedId() const;
-    void setReferencedId(const std::string& id);
+    const std::optional<std::string> &getReferencedId() const;
+    void setReferencedId(const std::string &id);
 
     std::string toString() const override;
 
 private:
-    const ReferenceFieldSchema& schema_;
+    const ReferenceFieldSchema &schema_;
     std::optional<std::string> referencedId_;
 };

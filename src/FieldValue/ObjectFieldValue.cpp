@@ -16,11 +16,9 @@ ObjectFieldValue::ObjectFieldValue(const FieldSchema &schema)
     }
 }
 
-bool ObjectFieldValue::setValueFromString(const std::string &val, std::string &error)
+void ObjectFieldValue::setValueFromString(const std::string &val)
 {
-    // ❌ Objects cannot be directly set from a single string
-    error = "Cannot assign a raw string value to an object field.";
-    return false;
+    throw std::runtime_error("Cannot assign a raw string value to an object field.");
 }
 
 std::string ObjectFieldValue::toString() const
@@ -42,7 +40,7 @@ std::string ObjectFieldValue::toString() const
     return oss.str();
 }
 
-bool ObjectFieldValue::validate(std::string &error) const
+void ObjectFieldValue::validate() const
 {
     const auto &objSchema = static_cast<const ObjectFieldSchema &>(getSchema());
 
@@ -51,24 +49,17 @@ bool ObjectFieldValue::validate(std::string &error) const
         const std::string &fieldName = pair.first;
         const FieldSchema *fieldSchema = pair.second.get();
 
-        // Check required fields exist
         if (fieldSchema->isRequired() && !hasFieldValue(fieldName))
         {
-            error = "Missing required field '" + fieldName + "' in object.";
-            return false;
+            throw std::runtime_error("Missing required field '" + fieldName + "' in object.");
         }
 
-        // Validate nested fields recursively
         if (hasFieldValue(fieldName))
         {
             FieldValue *val = getFieldValue(fieldName);
-            if (!val->validate(error))
-            {
-                return false;
-            }
+            val->validate();
         }
     }
-    return true;
 }
 
 void ObjectFieldValue::setFieldValue(const std::string &fieldName, std::unique_ptr<FieldValue> value)
@@ -85,4 +76,15 @@ FieldValue *ObjectFieldValue::getFieldValue(const std::string &fieldName) const
 bool ObjectFieldValue::hasFieldValue(const std::string &fieldName) const
 {
     return fieldValues_.find(fieldName) != fieldValues_.end();
+}
+
+bool ObjectFieldValue::isEmpty() const
+{
+    // Consider object empty if ALL its fields are empty
+    for (const auto &[name, field] : fieldValues_)
+    {
+        if (!field->isEmpty())
+            return false;
+    }
+    return true;
 }

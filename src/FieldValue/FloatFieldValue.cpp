@@ -1,24 +1,36 @@
 #include "FloatFieldValue.h"
 #include <string>
 
-FloatFieldValue::FloatFieldValue(const FieldSchema& schema)
+FloatFieldValue::FloatFieldValue(const FieldSchema &schema)
     : FieldValue(schema) {}
 
-bool FloatFieldValue::setValueFromString(const std::string& val, std::string& error) {
-    try {
+void FloatFieldValue::setValueFromString(const std::string &val)
+{
+    try
+    {
         value_ = std::stof(val);
-    } catch (...) {
-        error = "Invalid float format";
-        return false;
     }
-    return validate(error);
+    catch (...)
+    {
+        throw std::runtime_error("Invalid float format: " + val);
+    }
+
+    validate();
 }
 
-std::string FloatFieldValue::toString() const {
+std::string FloatFieldValue::toString() const
+{
     return value_ ? std::to_string(*value_) : "";
 }
 
-bool FloatFieldValue::validate(std::string& error) const {
-    if (!value_) return true; // or false if required
-    return schema_.validate(std::optional<std::string>(std::to_string(*value_)), error);
+void FloatFieldValue::validate() const
+{
+    if (!value_)
+        return;
+    return schema_.validate(std::optional<std::string>(std::to_string(*value_)));
+}
+
+bool FloatFieldValue::isEmpty() const
+{
+    return !value_.has_value();
 }

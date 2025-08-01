@@ -10,7 +10,7 @@ class FieldRuleSchema
 public:
     virtual ~FieldRuleSchema() = default;
 
-    virtual bool apply(const std::optional<std::string> &value, std::string &error) const = 0;
+    virtual void apply(const std::optional<std::string> &value) const = 0;
 };
 
 // Base configuration struct for all fields
@@ -55,17 +55,12 @@ public:
         rules_.push_back(std::move(rule));
     }
 
-    // Validate by applying all rules sequentially
-    bool validate(const std::optional<std::string> &value, std::string &error) const
+    void validate(const std::optional<std::string> &value) const
     {
         for (const auto &rule : rules_)
         {
-            if (!rule->apply(value, error))
-            {
-                return false;
-            }
+            rule->apply(value); // Will throw std::runtime_error if validation fails
         }
-        return true;
     }
 
 protected:

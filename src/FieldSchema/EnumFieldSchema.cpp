@@ -6,17 +6,17 @@ class EnumRuleSchema : public FieldRuleSchema
 public:
     explicit EnumRuleSchema(std::vector<std::string> allowed) : allowedValues_(std::move(allowed)) {}
 
-    bool apply(const std::optional<std::string> &value, std::string &error) const override
+    void apply(const std::optional<std::string> &value) const override
     {
         if (!value.has_value())
-            return true;
+            return; // no value means no validation needed
+
         const auto &val = *value;
+
         if (std::find(allowedValues_.begin(), allowedValues_.end(), val) == allowedValues_.end())
         {
-            error = "Value '" + val + "' is not allowed.";
-            return false;
+            throw std::runtime_error("Value '" + val + "' is not allowed.");
         }
-        return true;
     }
 
 private:

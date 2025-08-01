@@ -13,11 +13,9 @@ void ArrayFieldValue::addElement(std::unique_ptr<FieldValue> value)
     }
 }
 
-bool ArrayFieldValue::setValueFromString(const std::string &val, std::string &error)
+void ArrayFieldValue::setValueFromString(const std::string &val)
 {
-    // ❌ Arrays can’t be directly set from a string
-    error = "Cannot set an array field from a raw string.";
-    return false;
+    throw std::runtime_error("Cannot set an array field from a raw string.");
 }
 
 std::string ArrayFieldValue::toString() const
@@ -34,14 +32,15 @@ std::string ArrayFieldValue::toString() const
     return oss.str();
 }
 
-bool ArrayFieldValue::validate(std::string &error) const
+void ArrayFieldValue::validate() const
 {
     for (const auto &element : elements_)
     {
-        if (!element->validate(error))
-        {
-            return false;
-        }
+        element->validate();
     }
-    return true;
+}
+
+bool ArrayFieldValue::isEmpty() const
+{
+    return elements_.empty();
 }

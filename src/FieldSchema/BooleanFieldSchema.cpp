@@ -5,18 +5,18 @@
 class BooleanRuleSchema : public FieldRuleSchema
 {
 public:
-    bool apply(const std::optional<std::string> &value, std::string &error) const override
+    void apply(const std::optional<std::string> &value) const override
     {
         if (!value.has_value())
-            return true;
+            return; // no value means nothing to validate
+
         static const std::vector<std::string> validValues = {"true", "false", "1", "0"};
         const auto &val = *value;
+
         if (std::find(validValues.begin(), validValues.end(), val) == validValues.end())
         {
-            error = "Value '" + val + "' is not a valid boolean.";
-            return false;
+            throw std::runtime_error("Value '" + val + "' is not a valid boolean.");
         }
-        return true;
     }
 };
 

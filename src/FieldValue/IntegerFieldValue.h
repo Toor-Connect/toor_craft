@@ -2,13 +2,15 @@
 #include "FieldValue.h"
 #include <optional>
 
-class IntegerFieldValue : public FieldValue {
+class IntegerFieldValue : public FieldValue
+{
 public:
-    explicit IntegerFieldValue(const FieldSchema& schema);
+    explicit IntegerFieldValue(const FieldSchema &schema);
 
-    bool setValueFromString(const std::string& val, std::string& error) override;
+    void setValueFromString(const std::string &val) override;
     std::string toString() const override;
-    bool validate(std::string& error) const override;
+    void validate() const override;
+    bool isEmpty() const override;
 
 private:
     std::optional<int> value_;

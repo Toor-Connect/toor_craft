@@ -22,9 +22,6 @@ public:
 
     std::vector<std::string> getFieldNames() const;
 
-    bool validateObject(const std::unordered_map<std::string, std::string> &values,
-                        std::string &error) const;
-
 private:
     std::unordered_map<std::string, std::unique_ptr<FieldSchema>> fields_;
 };

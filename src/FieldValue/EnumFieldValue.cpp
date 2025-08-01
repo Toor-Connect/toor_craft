@@ -3,10 +3,10 @@
 EnumFieldValue::EnumFieldValue(const FieldSchema &schema)
     : FieldValue(schema) {}
 
-bool EnumFieldValue::setValueFromString(const std::string &val, std::string &error)
+void EnumFieldValue::setValueFromString(const std::string &val)
 {
     value_ = val;
-    return validate(error);
+    validate();
 }
 
 std::string EnumFieldValue::toString() const
@@ -14,7 +14,12 @@ std::string EnumFieldValue::toString() const
     return value_.value_or("");
 }
 
-bool EnumFieldValue::validate(std::string &error) const
+void EnumFieldValue::validate() const
 {
-    return schema_.validate(value_, error);
+    return schema_.validate(value_);
+}
+
+bool EnumFieldValue::isEmpty() const
+{
+    return !value_.has_value();
 }

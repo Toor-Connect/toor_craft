@@ -1,24 +1,36 @@
 #include "IntegerFieldValue.h"
 #include <string>
 
-IntegerFieldValue::IntegerFieldValue(const FieldSchema& schema)
+IntegerFieldValue::IntegerFieldValue(const FieldSchema &schema)
     : FieldValue(schema) {}
 
-bool IntegerFieldValue::setValueFromString(const std::string& val, std::string& error) {
-    try {
+void IntegerFieldValue::setValueFromString(const std::string &val)
+{
+    try
+    {
         value_ = std::stoi(val);
-    } catch (...) {
-        error = "Invalid integer format";
-        return false;
     }
-    return validate(error);
+    catch (...)
+    {
+        throw std::runtime_error("Invalid integer format: " + val);
+    }
+
+    validate();
 }
 
-std::string IntegerFieldValue::toString() const {
+std::string IntegerFieldValue::toString() const
+{
     return value_ ? std::to_string(*value_) : "";
 }
 
-bool IntegerFieldValue::validate(std::string& error) const {
-    if (!value_) return true; // or false if required
-    return schema_.validate(std::optional<std::string>(std::to_string(*value_)), error);
+void IntegerFieldValue::validate() const
+{
+    if (!value_)
+        return;
+    return schema_.validate(std::optional<std::string>(std::to_string(*value_)));
+}
+
+bool IntegerFieldValue::isEmpty() const
+{
+    return !value_.has_value();
 }

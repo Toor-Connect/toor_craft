@@ -1,17 +1,25 @@
 #include "StringFieldValue.h"
 
-StringFieldValue::StringFieldValue(const FieldSchema& schema)
+StringFieldValue::StringFieldValue(const FieldSchema &schema)
     : FieldValue(schema) {}
 
-bool StringFieldValue::setValueFromString(const std::string& val, std::string& error) {
+void StringFieldValue::setValueFromString(const std::string &val)
+{
     value_ = val;
-    return validate(error);
+    validate();
 }
 
-std::string StringFieldValue::toString() const {
+std::string StringFieldValue::toString() const
+{
     return value_.value_or("");
 }
 
-bool StringFieldValue::validate(std::string& error) const {
-    return schema_.validate(value_, error);
+void StringFieldValue::validate() const
+{
+    return schema_.validate(value_);
+}
+
+bool StringFieldValue::isEmpty() const
+{
+    return !value_.has_value() || value_->empty();
 }

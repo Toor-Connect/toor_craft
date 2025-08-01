@@ -10,9 +10,10 @@ class ObjectFieldValue : public FieldValue
 public:
     explicit ObjectFieldValue(const FieldSchema &schema);
 
-    bool setValueFromString(const std::string &val, std::string &error) override;
+    void setValueFromString(const std::string &val) override;
     std::string toString() const override;
-    bool validate(std::string &error) const override;
+    void validate() const override;
+    bool isEmpty() const override;
 
     void setFieldValue(const std::string &fieldName, std::unique_ptr<FieldValue> value);
     FieldValue *getFieldValue(const std::string &fieldName) const;

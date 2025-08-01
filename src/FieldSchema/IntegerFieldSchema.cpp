@@ -7,37 +7,43 @@ public:
     IntegerRangeRuleSchema(std::optional<int64_t> minVal, std::optional<int64_t> maxVal)
         : minValue_(minVal), maxValue_(maxVal) {}
 
-    bool apply(const std::optional<std::string> &value, std::string &error) const override
+    void apply(const std::optional<std::string> &value) const override
     {
         if (!value.has_value())
-            return true;
+            return; // nothing to validate if no value provided
+
         const auto &valStr = *value;
+
         try
         {
             size_t pos;
             int64_t val = std::stoll(valStr, &pos);
+
             if (pos != valStr.size())
             {
-                error = "Value '" + valStr + "' contains invalid characters.";
-                return false;
+                throw std::runtime_error("Value '" + valStr + "' contains invalid characters.");
             }
+
             if (minValue_ && val < *minValue_)
             {
-                error = "Value " + valStr + " is less than minimum " + std::to_string(*minValue_);
-                return false;
+                throw std::runtime_error(
+                    "Value " + valStr + " is less than minimum " + std::to_string(*minValue_));
             }
+
             if (maxValue_ && val > *maxValue_)
             {
-                error = "Value " + valStr + " exceeds maximum " + std::to_string(*maxValue_);
-                return false;
+                throw std::runtime_error(
+                    "Value " + valStr + " exceeds maximum " + std::to_string(*maxValue_));
             }
         }
-        catch (...)
+        catch (const std::invalid_argument &)
         {
-            error = "Value '" + valStr + "' is not a valid integer.";
-            return false;
+            throw std::runtime_error("Value '" + valStr + "' is not a valid integer.");
         }
-        return true;
+        catch (const std::out_of_range &)
+        {
+            throw std::runtime_error("Value '" + valStr + "' is out of range for an integer.");
+        }
     }
 
 private:

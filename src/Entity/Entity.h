@@ -14,8 +14,8 @@ public:
     explicit Entity(const EntitySchema &schema);
     const EntitySchema &getSchema() const;
     FieldValue *getFieldValue(const std::string &fieldName);
-    bool setFieldValue(const std::string &fieldName, const std::string &value, std::string &error);
-    bool validate(std::string &error) const;
+    void setFieldValue(const std::string &fieldName, const std::string &value);
+    void validate() const;
     void setId(const std::string &id);
     const std::string &getId() const;
     void setParentId(const std::string &parentId);

@@ -13,9 +13,10 @@ public:
 
     const FieldSchema &getSchema() const { return schema_; }
 
-    virtual bool setValueFromString(const std::string &val, std::string &error) = 0;
+    virtual void setValueFromString(const std::string &val) = 0;
     virtual std::string toString() const = 0;
-    virtual bool validate(std::string &error) const = 0;
+    virtual void validate() const = 0;
+    virtual bool isEmpty() const = 0;
 
 protected:
     const FieldSchema &schema_;

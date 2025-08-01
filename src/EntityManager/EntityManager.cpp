@@ -79,9 +79,7 @@ static void populateFieldValue(FieldValue *fieldValue, const FieldSchema &schema
         if (!node.IsScalar())
             throw std::runtime_error("Expected scalar for primitive field type: " + type);
 
-        std::string error;
-        if (!fieldValue->setValueFromString(node.as<std::string>(), error))
-            throw std::runtime_error("Error setting scalar value: " + error);
+        fieldValue->setValueFromString(node.as<std::string>());
     }
 }
 
@@ -96,10 +94,8 @@ void EntityManager::addEntity(std::unique_ptr<Entity> entity)
     const std::string &id = entity->getId();
     const std::string &parentId = entity->getParentId();
 
-    // Insert into main storage
     entities_.emplace(id, std::move(entity));
 
-    // Update parent-child index
     Entity *ptr = entities_[id].get();
     if (!parentId.empty())
     {
@@ -125,7 +121,6 @@ bool EntityManager::removeEntity(const std::string &id)
 
     const std::string &parentId = it->second->getParentId();
 
-    // Remove entity pointer from parent's children vector
     if (!parentId.empty())
     {
         auto childIt = childrenIndex_.find(parentId);
@@ -134,7 +129,6 @@ bool EntityManager::removeEntity(const std::string &id)
             auto &siblings = childIt->second;
             siblings.erase(std::remove(siblings.begin(), siblings.end(), it->second.get()), siblings.end());
 
-            // Clean up empty vector to avoid clutter
             if (siblings.empty())
             {
                 childrenIndex_.erase(childIt);
@@ -153,15 +147,17 @@ void EntityManager::clear()
     parents_.clear();
 }
 
-bool EntityManager::setFieldValue(const std::string &entityId, const std::string &fieldName, const std::string &value, std::string &error)
+void EntityManager::setFieldValue(const std::string &entityId,
+                                  const std::string &fieldName,
+                                  const std::string &value)
 {
     auto entity = getEntityById(entityId);
     if (!entity)
     {
-        error = "Entity not found: " + entityId;
-        return false;
+        throw std::runtime_error("Entity not found: " + entityId);
     }
-    return entity->setFieldValue(fieldName, value, error);
+
+    entity->setFieldValue(fieldName, value);
 }
 
 FieldValue *EntityManager::getFieldValue(const std::string &entityId, const std::string &fieldName)
@@ -172,15 +168,15 @@ FieldValue *EntityManager::getFieldValue(const std::string &entityId, const std:
     return entity->getFieldValue(fieldName);
 }
 
-bool EntityManager::validateEntity(const std::string &entityId, std::string &error)
+void EntityManager::validate(const std::string &entityId)
 {
     auto entity = getEntityById(entityId);
     if (!entity)
     {
-        error = "Entity not found: " + entityId;
-        return false;
+        throw std::runtime_error("Entity not found: " + entityId);
     }
-    return entity->validate(error);
+
+    entity->validate();
 }
 
 std::vector<Entity *> EntityManager::query(const IEntityQuery &query) const

@@ -31,23 +31,3 @@ std::vector<std::string> ObjectFieldSchema::getFieldNames() const
     }
     return names;
 }
-
-bool ObjectFieldSchema::validateObject(
-    const std::unordered_map<std::string, std::string> &values,
-    std::string &error) const
-{
-    for (const auto &pair : fields_)
-    {
-        const auto &field = *pair.second;
-        auto it = values.find(pair.first);
-        std::optional<std::string> val = (it != values.end()) ? std::make_optional(it->second)
-                                                              : std::nullopt;
-
-        if (!field.validate(val, error))
-        {
-            error = "Field '" + pair.first + "': " + error;
-            return false;
-        }
-    }
-    return true;
-}

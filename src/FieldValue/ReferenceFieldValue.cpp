@@ -6,49 +6,46 @@ ReferenceFieldValue::ReferenceFieldValue(const ReferenceFieldSchema &schema)
 {
 }
 
-bool ReferenceFieldValue::setValueFromString(const std::string &value, std::string &error)
+void ReferenceFieldValue::setValueFromString(const std::string &value)
 {
-    // We expect 'value' to be an entity ID string
-    // Optionally, validate that the referenced entity exists and matches the type
     auto entity = EntityManager::instance().getEntityById(value);
     if (!entity)
     {
-        error = "Referenced entity with ID '" + value + "' does not exist";
-        return false;
+        throw std::runtime_error("Referenced entity with ID '" + value + "' does not exist");
     }
+
     if (!schema_.getTargetEntityName().empty() &&
         entity->getSchema().getName() != schema_.getTargetEntityName())
     {
-        error = "Referenced entity type mismatch, expected '" + schema_.getTargetEntityName() + "'";
-        return false;
+        throw std::runtime_error(
+            "Referenced entity type mismatch, expected '" + schema_.getTargetEntityName() + "'");
     }
+
     referencedId_ = value;
-    return true;
 }
 
-bool ReferenceFieldValue::validate(std::string &error) const
+void ReferenceFieldValue::validate() const
 {
     if (schema_.isRequired() && !referencedId_.has_value())
     {
-        error = "Reference is required but no ID set";
-        return false;
+        throw std::runtime_error("Reference is required but no ID set");
     }
+
     if (referencedId_)
     {
         auto entity = EntityManager::instance().getEntityById(*referencedId_);
         if (!entity)
         {
-            error = "Referenced entity with ID '" + *referencedId_ + "' does not exist";
-            return false;
+            throw std::runtime_error("Referenced entity with ID '" + *referencedId_ + "' does not exist");
         }
+
         if (!schema_.getTargetEntityName().empty() &&
             entity->getSchema().getName() != schema_.getTargetEntityName())
         {
-            error = "Referenced entity type mismatch, expected '" + schema_.getTargetEntityName() + "'";
-            return false;
+            throw std::runtime_error(
+                "Referenced entity type mismatch, expected '" + schema_.getTargetEntityName() + "'");
         }
     }
-    return true;
 }
 
 const std::optional<std::string> &ReferenceFieldValue::getReferencedId() const
@@ -64,4 +61,9 @@ void ReferenceFieldValue::setReferencedId(const std::string &id)
 std::string ReferenceFieldValue::toString() const
 {
     return referencedId_.value_or("");
+}
+
+bool ReferenceFieldValue::isEmpty() const
+{
+    return !referencedId_.has_value();
 }

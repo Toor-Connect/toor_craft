@@ -9,14 +9,11 @@ class ArrayFieldValue : public FieldValue
 public:
     explicit ArrayFieldValue(const ArrayFieldSchema &schema);
 
-    bool setValueFromString(const std::string &val, std::string &error) override;
+    void setValueFromString(const std::string &val) override;
     std::string toString() const override;
-    bool validate(std::string &error) const override;
-
-    // Add a new element to the array
+    void validate() const override;
+    bool isEmpty() const override;
     void addElement(std::unique_ptr<FieldValue> value);
-
-    // Get elements
     const std::vector<std::unique_ptr<FieldValue>> &getElements() const { return elements_; }
 
 private:

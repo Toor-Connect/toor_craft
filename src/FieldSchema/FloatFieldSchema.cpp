@@ -7,31 +7,36 @@ public:
     FloatRangeRuleSchema(std::optional<double> minVal, std::optional<double> maxVal)
         : minValue_(minVal), maxValue_(maxVal) {}
 
-    bool apply(const std::optional<std::string> &value, std::string &error) const override
+    void apply(const std::optional<std::string> &value) const override
     {
         if (!value.has_value())
-            return true;
+            return; // nothing to validate if the field is empty
+
         const auto &valStr = *value;
         try
         {
             double val = std::stod(valStr);
+
             if (minValue_ && val < *minValue_)
             {
-                error = "Value " + valStr + " is less than minimum " + std::to_string(*minValue_);
-                return false;
+                throw std::runtime_error(
+                    "Value " + valStr + " is less than minimum " + std::to_string(*minValue_));
             }
+
             if (maxValue_ && val > *maxValue_)
             {
-                error = "Value " + valStr + " exceeds maximum " + std::to_string(*maxValue_);
-                return false;
+                throw std::runtime_error(
+                    "Value " + valStr + " exceeds maximum " + std::to_string(*maxValue_));
             }
         }
-        catch (...)
+        catch (const std::invalid_argument &)
         {
-            error = "Value '" + valStr + "' is not a valid float.";
-            return false;
+            throw std::runtime_error("Value '" + valStr + "' is not a valid float.");
         }
-        return true;
+        catch (const std::out_of_range &)
+        {
+            throw std::runtime_error("Value '" + valStr + "' is out of range for a float.");
+        }
     }
 
 private:

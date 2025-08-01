@@ -2,29 +2,43 @@
 #include <algorithm>
 #include <string>
 
-BooleanFieldValue::BooleanFieldValue(const FieldSchema& schema)
+BooleanFieldValue::BooleanFieldValue(const FieldSchema &schema)
     : FieldValue(schema) {}
 
-bool BooleanFieldValue::setValueFromString(const std::string& val, std::string& error) {
+void BooleanFieldValue::setValueFromString(const std::string &val)
+{
     std::string lowerVal = val;
     std::transform(lowerVal.begin(), lowerVal.end(), lowerVal.begin(), ::tolower);
 
-    if (lowerVal == "true" || lowerVal == "1") {
+    if (lowerVal == "true" || lowerVal == "1")
+    {
         value_ = true;
-    } else if (lowerVal == "false" || lowerVal == "0") {
-        value_ = false;
-    } else {
-        error = "Invalid boolean value";
-        return false;
     }
-    return validate(error);
+    else if (lowerVal == "false" || lowerVal == "0")
+    {
+        value_ = false;
+    }
+    else
+    {
+        throw std::runtime_error("Invalid boolean value: " + val);
+    }
+
+    validate(); // validate will also throw if something is wrong
 }
 
-std::string BooleanFieldValue::toString() const {
+std::string BooleanFieldValue::toString() const
+{
     return value_ ? "true" : "false";
 }
+void BooleanFieldValue::validate() const
+{
+    if (!value_)
+        return;
 
-bool BooleanFieldValue::validate(std::string& error) const {
-    if (!value_) return true; // or false if required
-    return schema_.validate(std::optional<std::string>(value_ ? "true" : "false"), error);
+    schema_.validate(std::optional<std::string>(value_ ? "true" : "false"));
+}
+
+bool BooleanFieldValue::isEmpty() const
+{
+    return !value_.has_value();
 }

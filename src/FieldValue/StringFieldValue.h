@@ -2,13 +2,15 @@
 #include "FieldValue.h"
 #include <optional>
 
-class StringFieldValue : public FieldValue {
+class StringFieldValue : public FieldValue
+{
 public:
-    explicit StringFieldValue(const FieldSchema& schema);
+    explicit StringFieldValue(const FieldSchema &schema);
 
-    bool setValueFromString(const std::string& val, std::string& error) override;
+    void setValueFromString(const std::string &val) override;
     std::string toString() const override;
-    bool validate(std::string& error) const override;
+    void validate() const override;
+    bool isEmpty() const override;
 
 private:
     std::optional<std::string> value_;
