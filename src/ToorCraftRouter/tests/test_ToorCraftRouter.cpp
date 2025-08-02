@@ -249,11 +249,11 @@ fields:
   REQUIRE(parentRootResp["parent"].is_null());
 }
 
-TEST_CASE("ToorCraftRouter supports deleteEntity with cascading removal and reference cleanup")
+TEST_CASE("ToorCraftRouter handles deep cascade deletion and reference cleanup")
 {
   auto &router = ToorCraftRouter::instance();
 
-  // --- 1️⃣ Load schema with references and hierarchy ---
+  // --- 1️⃣ Load schema with 3 levels and references ---
   json schemaReq = {
       {"command", "loadSchemas"},
       {"schemas", {{"home.yaml", R"(
@@ -267,12 +267,21 @@ fields:
 )"},
                    {"device.yaml", R"(
 entity_name: Device
+children:
+  sensors:
+    entity: Sensor
 fields:
   name:
     type: string
   sibling:
     type: reference
     target: Device
+)"},
+                   {"sensor.yaml", R"(
+entity_name: Sensor
+fields:
+  name:
+    type: string
 )"}}}};
 
   REQUIRE(json::parse(router.handleRequest(schemaReq.dump()))["status"] == "ok");
@@ -281,8 +290,8 @@ fields:
   json homeCreate = {
       {"command", "createEntity"},
       {"schema", "SmartHome"},
-      {"id", "homeDelete"},
-      {"payload", {{"name", "Casa Delete"}}}};
+      {"id", "homeCascade"},
+      {"payload", {{"name", "Casa Grande"}}}};
   auto homeResp = json::parse(router.handleRequest(homeCreate.dump()));
   REQUIRE(homeResp["status"] == "ok");
 
@@ -291,7 +300,7 @@ fields:
       {"command", "createEntity"},
       {"schema", "Device"},
       {"id", "deviceA"},
-      {"parentId", "homeDelete"},
+      {"parentId", "homeCascade"},
       {"payload", {{"name", "Device Alpha"}}}};
   REQUIRE(json::parse(router.handleRequest(devACreate.dump()))["status"] == "ok");
 
@@ -299,11 +308,28 @@ fields:
       {"command", "createEntity"},
       {"schema", "Device"},
       {"id", "deviceB"},
-      {"parentId", "homeDelete"},
+      {"parentId", "homeCascade"},
       {"payload", {{"name", "Device Beta"}}}};
   REQUIRE(json::parse(router.handleRequest(devBCreate.dump()))["status"] == "ok");
 
-  // --- 4️⃣ Set cross-reference between devices ---
+  // --- 4️⃣ Create sensors under deviceA ---
+  json sensorA1Create = {
+      {"command", "createEntity"},
+      {"schema", "Sensor"},
+      {"id", "sensorA1"},
+      {"parentId", "deviceA"},
+      {"payload", {{"name", "Temp Sensor"}}}};
+  REQUIRE(json::parse(router.handleRequest(sensorA1Create.dump()))["status"] == "ok");
+
+  json sensorA2Create = {
+      {"command", "createEntity"},
+      {"schema", "Sensor"},
+      {"id", "sensorA2"},
+      {"parentId", "deviceA"},
+      {"payload", {{"name", "Humidity Sensor"}}}};
+  REQUIRE(json::parse(router.handleRequest(sensorA2Create.dump()))["status"] == "ok");
+
+  // --- 5️⃣ Cross-reference deviceA & deviceB ---
   json setSiblingA = {
       {"command", "setField"},
       {"id", "deviceA"},
@@ -318,13 +344,18 @@ fields:
       {"value", "deviceA"}};
   REQUIRE(json::parse(router.handleRequest(setSiblingB.dump()))["status"] == "ok");
 
-  // 🔍 Verify cross-references
+  // 🔍 Confirm references before deletion
   auto devA = json::parse(router.handleRequest(R"({"command":"queryEntity","id":"deviceA"})"));
   auto devB = json::parse(router.handleRequest(R"({"command":"queryEntity","id":"deviceB"})"));
   REQUIRE(devA["entity"]["sibling"] == "deviceB");
   REQUIRE(devB["entity"]["sibling"] == "deviceA");
 
-  // --- 5️⃣ Delete deviceA ---
+  // 🔍 Confirm sensors exist before deletion
+  auto sensorCheck = json::parse(router.handleRequest(R"({"command":"queryEntity","id":"sensorA1"})"));
+  REQUIRE(sensorCheck["status"] == "ok");
+  REQUIRE(sensorCheck["entity"]["name"] == "Temp Sensor");
+
+  // --- 6️⃣ Delete deviceA (should also delete its sensors) ---
   json deleteDevA = {
       {"command", "deleteEntity"},
       {"id", "deviceA"}};
@@ -335,23 +366,31 @@ fields:
   auto devAQuery = json::parse(router.handleRequest(R"({"command":"queryEntity","id":"deviceA"})"));
   REQUIRE(devAQuery["status"] == "not_found");
 
-  // 🔍 DeviceB's sibling field should be cleared
+  // 🔍 Sensors under deviceA should also be deleted
+  auto sensorAfter1 = json::parse(router.handleRequest(R"({"command":"queryEntity","id":"sensorA1"})"));
+  auto sensorAfter2 = json::parse(router.handleRequest(R"({"command":"queryEntity","id":"sensorA2"})"));
+  REQUIRE(sensorAfter1["status"] == "not_found");
+  REQUIRE(sensorAfter2["status"] == "not_found");
+
+  // 🔍 DeviceB should now have sibling cleared (null or empty)
   auto devBAfter = json::parse(router.handleRequest(R"({"command":"queryEntity","id":"deviceB"})"));
   REQUIRE(devBAfter["status"] == "ok");
-  REQUIRE((!devBAfter["entity"].contains("sibling") || devBAfter["entity"]["sibling"].is_null() || devBAfter["entity"]["sibling"] == ""));
+  REQUIRE((!devBAfter["entity"].contains("sibling") ||
+           devBAfter["entity"]["sibling"].is_null() ||
+           devBAfter["entity"]["sibling"] == ""));
 
-  // --- 6️⃣ Delete home (cascading deletion) ---
+  // --- 7️⃣ Delete home (should remove deviceB too) ---
   json deleteHome = {
       {"command", "deleteEntity"},
-      {"id", "homeDelete"}};
+      {"id", "homeCascade"}};
   auto deleteHomeResp = json::parse(router.handleRequest(deleteHome.dump()));
   REQUIRE(deleteHomeResp["status"] == "ok");
 
-  // 🔍 DeviceB should also be gone
+  // 🔍 DeviceB should now be gone
   auto devBQuery = json::parse(router.handleRequest(R"({"command":"queryEntity","id":"deviceB"})"));
   REQUIRE(devBQuery["status"] == "not_found");
 
-  // 🔍 Check the tree is now empty
+  // 🔍 Tree should now be empty
   auto treeAfter = json::parse(router.handleRequest(R"({"command":"getTree"})"));
   REQUIRE(treeAfter["status"] == "ok");
   REQUIRE(treeAfter["tree"].empty());
