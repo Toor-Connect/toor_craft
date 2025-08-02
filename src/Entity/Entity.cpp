@@ -7,10 +7,8 @@ using json = nlohmann::json;
 Entity::Entity(const EntitySchema &schema)
     : schema_(schema)
 {
-    // Iterate over the fields of the schema
     for (const auto &[fieldName, fieldSchemaPtr] : schema_.getFields())
     {
-        // Create FieldValue using FieldValueFactory from the field schema
         auto fieldValue = FieldValueFactory::instance().create(fieldSchemaPtr->getTypeName(), *fieldSchemaPtr);
         fieldValues_.emplace(fieldName, std::move(fieldValue));
     }
@@ -88,13 +86,26 @@ std::unordered_map<std::string, std::string> Entity::getDict() const
 std::string Entity::getJson() const
 {
     json entityJson;
-
-    // Always include metadata
     entityJson["id"] = _id;
     entityJson["schema"] = schema_.getName();
     entityJson["parentId"] = _parentId.empty() ? json(nullptr) : json(_parentId);
 
-    // Iterate through fields and convert each to proper JSON
+    switch (state_)
+    {
+    case EntityState::Added:
+        entityJson["state"] = "Added";
+        break;
+    case EntityState::Modified:
+        entityJson["state"] = "Modified";
+        break;
+    case EntityState::Deleted:
+        entityJson["state"] = "Deleted";
+        break;
+    case EntityState::Unchanged:
+        entityJson["state"] = "Unchanged";
+        break;
+    }
+
     for (const auto &pair : fieldValues_)
     {
         const std::string &fieldName = pair.first;
@@ -105,6 +116,5 @@ std::string Entity::getJson() const
             entityJson[fieldName] = json::parse(fieldValue->toJson());
         }
     }
-
     return entityJson.dump(2); // pretty print for readability
 }

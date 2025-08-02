@@ -157,6 +157,21 @@ std::string ToorCraftJSON::getTree()
             json node;
             node["id"] = parent->getId();
             node["schema"] = parent->getSchema().getName();
+            switch (parent->getState())
+            {
+            case EntityState::Added:
+                node["state"] = "Added";
+                break;
+            case EntityState::Modified:
+                node["state"] = "Modified";
+                break;
+            case EntityState::Deleted:
+                node["state"] = "Deleted";
+                break;
+            case EntityState::Unchanged:
+                node["state"] = "Unchanged";
+                break;
+            }
 
             std::function<json(const Entity *)> collect;
             collect = [&](const Entity *entity) -> json
@@ -170,7 +185,22 @@ std::string ToorCraftJSON::getTree()
                         json childNode;
                         childNode["id"] = child->getId();
                         childNode["schema"] = child->getSchema().getName();
-                        childNode["children"] = collect(child); // recursion
+                        childNode["children"] = collect(child);
+                        switch (child->getState())
+                        {
+                        case EntityState::Added:
+                            childNode["state"] = "Added";
+                            break;
+                        case EntityState::Modified:
+                            childNode["state"] = "Modified";
+                            break;
+                        case EntityState::Deleted:
+                            childNode["state"] = "Deleted";
+                            break;
+                        case EntityState::Unchanged:
+                            childNode["state"] = "Unchanged";
+                            break;
+                        }
                         children.push_back(childNode);
                     }
                 }

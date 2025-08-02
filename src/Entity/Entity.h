@@ -8,6 +8,14 @@
 
 class EntitySchema; // Forward declaration
 
+enum class EntityState
+{
+    Unchanged,
+    Added,
+    Modified,
+    Deleted
+};
+
 class Entity
 {
 public:
@@ -22,10 +30,14 @@ public:
     const std::string &getParentId() const;
     std::unordered_map<std::string, std::string> getDict() const;
     std::string getJson() const;
+    void setState(EntityState newState) { state_ = newState; }
+    EntityState getState() const { return state_; }
+    bool isDeleted() const { return state_ == EntityState::Deleted; }
 
 private:
     const EntitySchema &schema_;
     std::unordered_map<std::string, std::unique_ptr<FieldValue>> fieldValues_;
     std::string _id;
     std::string _parentId;
+    EntityState state_ = EntityState::Unchanged;
 };

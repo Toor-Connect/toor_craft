@@ -33,7 +33,25 @@ void ToorCraftEngine::setField(const std::string &entityId,
                                const std::string &fieldName,
                                const std::string &value)
 {
-    EntityManager::instance().setFieldValue(entityId, fieldName, value);
+    auto &manager = EntityManager::instance();
+
+    Entity *entity = manager.getEntityById(entityId);
+    if (!entity)
+    {
+        throw std::runtime_error("Entity not found: " + entityId);
+    }
+
+    if (entity->getState() == EntityState::Deleted)
+    {
+        throw std::runtime_error("Cannot update field on a deleted entity: " + entityId);
+    }
+
+    manager.setFieldValue(entityId, fieldName, value);
+
+    if (entity->getState() != EntityState::Added)
+    {
+        entity->setState(EntityState::Modified);
+    }
 }
 
 void ToorCraftEngine::validateEntity(const std::string &entityId)
@@ -98,6 +116,7 @@ void ToorCraftEngine::createEntity(const std::string &schemaName,
     }
 
     Entity *rawPtr = newEntity.get();
+    newEntity->setState(EntityState::Added);
     EntityManager::instance().addEntity(std::move(newEntity));
 }
 

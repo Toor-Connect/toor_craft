@@ -3,8 +3,9 @@
 #include "EntityManager.h"
 #include "EntitySchema.h"
 #include "FieldValue.h"
+#include "Entity.h"
 
-TEST_CASE("EntityManager handles complex nested schema and multi-file data bundle")
+TEST_CASE("EntityManager handles complex nested schema, state tracking, and soft deletion")
 {
   // --- Load complex schema ---
   std::unordered_map<std::string, std::string> schemas;
@@ -125,8 +126,6 @@ sensor2:
   mgr.clear();
   mgr.parseDataBundle(data);
 
-  // --- Assertions ---
-
   SECTION("Root SmartHome entity is parsed correctly")
   {
     Entity *house = mgr.getEntityById("house1");
@@ -138,12 +137,34 @@ sensor2:
     // ✅ Object field: location
     FieldValue *locVal = house->getFieldValue("location");
     REQUIRE(locVal != nullptr);
-    auto dict = locVal->toString(); // Or check object subfields via API if implemented
 
     // ✅ Array field: tags
     FieldValue *tags = house->getFieldValue("tags");
     REQUIRE(tags != nullptr);
     REQUIRE(tags->toString().find("modern") != std::string::npos);
+
+    // ✅ State should initially be unchanged
+    REQUIRE(house->getState() == EntityState::Unchanged);
+  }
+
+  SECTION("Soft delete marks entity as deleted but keeps it accessible")
+  {
+    // Delete device1
+    bool removed = mgr.removeEntity("device1");
+    REQUIRE(removed);
+
+    Entity *device1 = mgr.getEntityById("device1");
+    REQUIRE(device1 != nullptr);
+
+    // ✅ It should now be marked as deleted
+    REQUIRE(device1->getState() == EntityState::Deleted);
+
+    // ✅ But it should NOT appear in the children of house1 anymore
+    const auto *children = mgr.getChildren("house1");
+    REQUIRE(children != nullptr);
+    REQUIRE(std::find_if(children->begin(), children->end(),
+                         [](Entity *e)
+                         { return e->getId() == "device1"; }) == children->end());
   }
 
   SECTION("Devices are linked under SmartHome")
@@ -181,8 +202,7 @@ sensor2:
     FieldValue *readings = sensor1->getFieldValue("readings");
     REQUIRE(readings != nullptr);
 
-    // This would typically be validated by iterating subvalues,
-    // but we at least confirm it contains the timestamps
+    // ✅ Confirm it contains the timestamps
     REQUIRE(readings->toString().find("2025-08-01T10:00:00Z") != std::string::npos);
     REQUIRE(readings->toString().find("23.5") != std::string::npos);
   }

@@ -125,60 +125,93 @@ bool EntityManager::removeEntity(const std::string &id)
 
     Entity *entity = it->second.get();
 
-    std::vector<Entity *> childrenCopy;
+    entity->setState(EntityState::Deleted);
+
     auto childIt = childrenIndex_.find(id);
     if (childIt != childrenIndex_.end())
     {
-        childrenCopy = childIt->second;
-        childrenIndex_.erase(childIt);
+        for (Entity *child : childIt->second)
+        {
+            removeEntity(child->getId());
+        }
     }
 
-    for (Entity *child : childrenCopy)
-    {
-        removeEntity(child->getId());
-    }
-
-    const std::string parentId = entity->getParentId();
+    const std::string &parentId = entity->getParentId();
     if (!parentId.empty())
     {
-        auto parentChildrenIt = childrenIndex_.find(parentId);
-        if (parentChildrenIt != childrenIndex_.end())
+        auto parentChildren = childrenIndex_.find(parentId);
+        if (parentChildren != childrenIndex_.end())
         {
-            auto &siblings = parentChildrenIt->second;
+            auto &siblings = parentChildren->second;
             siblings.erase(std::remove(siblings.begin(), siblings.end(), entity), siblings.end());
-            if (siblings.empty())
-            {
-                childrenIndex_.erase(parentChildrenIt);
-            }
         }
     }
-    else
-    {
-        parents_.erase(std::remove(parents_.begin(), parents_.end(), entity), parents_.end());
-    }
-
-    for (auto &pair : entities_)
-    {
-        Entity *otherEntity = pair.second.get();
-        for (const auto &fieldSchemaEntry : otherEntity->getSchema().getFields())
-        {
-            FieldValue *value = otherEntity->getFieldValue(fieldSchemaEntry.first);
-
-            if (auto refValue = dynamic_cast<ReferenceFieldValue *>(value))
-            {
-                if (refValue->getReferencedId().has_value() &&
-                    refValue->getReferencedId().value() == id)
-                {
-                    refValue->setReferencedId("");
-                }
-            }
-        }
-    }
-
-    entities_.erase(it);
 
     return true;
 }
+
+// bool EntityManager::removeEntity(const std::string &id)
+//{
+//     auto it = entities_.find(id);
+//     if (it == entities_.end())
+//         return false;
+//
+//     Entity *entity = it->second.get();
+//
+//     std::vector<Entity *> childrenCopy;
+//     auto childIt = childrenIndex_.find(id);
+//     if (childIt != childrenIndex_.end())
+//     {
+//         childrenCopy = childIt->second;
+//         childrenIndex_.erase(childIt);
+//     }
+//
+//     for (Entity *child : childrenCopy)
+//     {
+//         removeEntity(child->getId());
+//     }
+//
+//     const std::string parentId = entity->getParentId();
+//     if (!parentId.empty())
+//     {
+//         auto parentChildrenIt = childrenIndex_.find(parentId);
+//         if (parentChildrenIt != childrenIndex_.end())
+//         {
+//             auto &siblings = parentChildrenIt->second;
+//             siblings.erase(std::remove(siblings.begin(), siblings.end(), entity), siblings.end());
+//             if (siblings.empty())
+//             {
+//                 childrenIndex_.erase(parentChildrenIt);
+//             }
+//         }
+//     }
+//     else
+//     {
+//         parents_.erase(std::remove(parents_.begin(), parents_.end(), entity), parents_.end());
+//     }
+//
+//     for (auto &pair : entities_)
+//     {
+//         Entity *otherEntity = pair.second.get();
+//         for (const auto &fieldSchemaEntry : otherEntity->getSchema().getFields())
+//         {
+//             FieldValue *value = otherEntity->getFieldValue(fieldSchemaEntry.first);
+//
+//             if (auto refValue = dynamic_cast<ReferenceFieldValue *>(value))
+//             {
+//                 if (refValue->getReferencedId().has_value() &&
+//                     refValue->getReferencedId().value() == id)
+//                 {
+//                     refValue->setReferencedId("");
+//                 }
+//             }
+//         }
+//     }
+//
+//     entities_.erase(it);
+//
+//     return true;
+// }
 
 void EntityManager::clear()
 {
