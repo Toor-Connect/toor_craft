@@ -43,10 +43,10 @@ std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
         }
         else if (command == "getSchema")
         {
-            if (!request.contains("schemaName") || !request["schemaName"].is_string())
+            if (!request.contains("schema") || !request["schema"].is_string())
                 throw std::runtime_error("Missing or invalid 'schemaName'");
 
-            return api.getSchema(request["schemaName"].get<std::string>());
+            return api.getSchema(request["schema"].get<std::string>());
         }
         else if (command == "loadData")
         {
@@ -103,14 +103,14 @@ std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
         }
         else if (command == "createEntity")
         {
-            if (!request.contains("schemaName") || !request["schemaName"].is_string())
+            if (!request.contains("schema") || !request["schema"].is_string())
                 throw std::runtime_error("Missing or invalid 'schemaName'");
             if (!request.contains("id") || !request["id"].is_string())
                 throw std::runtime_error("Missing or invalid 'entityId'");
             if (!request.contains("payload") || !request["payload"].is_object())
                 throw std::runtime_error("Missing or invalid 'payload'");
 
-            std::string schemaName = request["schemaName"].get<std::string>();
+            std::string schemaName = request["schema"].get<std::string>();
             std::string entityId = request["id"].get<std::string>();
             std::string parentId = request.contains("parentId") && request["parentId"].is_string()
                                        ? request["parentId"].get<std::string>()

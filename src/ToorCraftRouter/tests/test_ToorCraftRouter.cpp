@@ -52,7 +52,7 @@ fields:
   REQUIRE(std::find(listResp["schemas"].begin(), listResp["schemas"].end(), "SmartHome") != listResp["schemas"].end());
 
   // --- 3️⃣ getSchema (new test) ---
-  json getSchemaReq = {{"command", "getSchema"}, {"schemaName", "SmartHome"}};
+  json getSchemaReq = {{"command", "getSchema"}, {"schema", "SmartHome"}};
   auto schemaDetails = json::parse(router.handleRequest(getSchemaReq.dump()));
 
   // ✅ Top-level checks
@@ -209,7 +209,7 @@ fields:
   // --- 2️⃣ createEntity (root) ---
   json homeCreate = {
       {"command", "createEntity"},
-      {"schemaName", "SmartHome"},
+      {"schema", "SmartHome"},
       {"id", "homeZ"},
       {"payload", {{"name", "Villa Nova"}}}};
   auto homeResp = json::parse(router.handleRequest(homeCreate.dump()));
@@ -221,7 +221,7 @@ fields:
   // --- 3️⃣ createEntity (child of homeZ) ---
   json deviceCreate = {
       {"command", "createEntity"},
-      {"schemaName", "Device"},
+      {"schema", "Device"},
       {"id", "deviceZ"},
       {"parentId", "homeZ"},
       {"payload", {{"name", "Thermo Deluxe"}}}};
