@@ -100,3 +100,26 @@ void ToorCraftEngine::createEntity(const std::string &schemaName,
     Entity *rawPtr = newEntity.get();
     EntityManager::instance().addEntity(std::move(newEntity));
 }
+
+void ToorCraftEngine::deleteEntity(const std::string &entityId)
+{
+    try
+    {
+        EntityManager &mgr = EntityManager::instance();
+
+        Entity *entity = mgr.getEntityById(entityId);
+        if (!entity)
+        {
+            throw std::runtime_error("Entity '" + entityId + "' not found");
+        }
+
+        if (!mgr.removeEntity(entityId))
+        {
+            throw std::runtime_error("Failed to remove entity '" + entityId + "'");
+        }
+    }
+    catch (const std::exception &ex)
+    {
+        throw std::runtime_error(std::string("deleteEntity failed: ") + ex.what());
+    }
+}

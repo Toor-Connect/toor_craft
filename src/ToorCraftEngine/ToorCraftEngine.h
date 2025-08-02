@@ -27,6 +27,7 @@ public:
                       const std::string &entityId,
                       const std::string &parentId,
                       const std::unordered_map<std::string, std::string> &fieldData);
+    void deleteEntity(const std::string &entityId);
 
 private:
     ToorCraftEngine() = default;

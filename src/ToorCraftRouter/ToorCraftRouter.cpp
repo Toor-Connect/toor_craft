@@ -129,6 +129,13 @@ std::string ToorCraftRouter::handleRequest(const std::string &jsonRequest)
 
             return api.getParent(request["id"].get<std::string>());
         }
+        else if (command == "deleteEntity")
+        {
+            if (!request.contains("id") || !request["id"].is_string())
+                throw std::runtime_error("Missing or invalid 'id'");
+
+            return api.deleteEntity(request["id"].get<std::string>());
+        }
         else
         {
             throw std::runtime_error("Unknown command: " + command);

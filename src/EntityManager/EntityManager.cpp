@@ -123,24 +123,60 @@ bool EntityManager::removeEntity(const std::string &id)
     if (it == entities_.end())
         return false;
 
-    const std::string &parentId = it->second->getParentId();
+    Entity *entity = it->second.get();
 
+    std::vector<Entity *> childrenCopy;
+    auto childIt = childrenIndex_.find(id);
+    if (childIt != childrenIndex_.end())
+    {
+        childrenCopy = childIt->second;
+        childrenIndex_.erase(childIt);
+    }
+
+    for (Entity *child : childrenCopy)
+    {
+        removeEntity(child->getId());
+    }
+
+    const std::string parentId = entity->getParentId();
     if (!parentId.empty())
     {
-        auto childIt = childrenIndex_.find(parentId);
-        if (childIt != childrenIndex_.end())
+        auto parentChildrenIt = childrenIndex_.find(parentId);
+        if (parentChildrenIt != childrenIndex_.end())
         {
-            auto &siblings = childIt->second;
-            siblings.erase(std::remove(siblings.begin(), siblings.end(), it->second.get()), siblings.end());
-
+            auto &siblings = parentChildrenIt->second;
+            siblings.erase(std::remove(siblings.begin(), siblings.end(), entity), siblings.end());
             if (siblings.empty())
             {
-                childrenIndex_.erase(childIt);
+                childrenIndex_.erase(parentChildrenIt);
+            }
+        }
+    }
+    else
+    {
+        parents_.erase(std::remove(parents_.begin(), parents_.end(), entity), parents_.end());
+    }
+
+    for (auto &pair : entities_)
+    {
+        Entity *otherEntity = pair.second.get();
+        for (const auto &fieldSchemaEntry : otherEntity->getSchema().getFields())
+        {
+            FieldValue *value = otherEntity->getFieldValue(fieldSchemaEntry.first);
+
+            if (auto refValue = dynamic_cast<ReferenceFieldValue *>(value))
+            {
+                if (refValue->getReferencedId().has_value() &&
+                    refValue->getReferencedId().value() == id)
+                {
+                    refValue->setReferencedId("");
+                }
             }
         }
     }
 
     entities_.erase(it);
+
     return true;
 }
 

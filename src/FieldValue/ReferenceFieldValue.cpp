@@ -72,9 +72,13 @@ bool ReferenceFieldValue::isEmpty() const
 std::string ReferenceFieldValue::toJson() const
 {
     nlohmann::json j;
-    if (referencedId_.has_value())
+    if (referencedId_.has_value() && !referencedId_->empty())
+    {
         j = *referencedId_;
+    }
     else
+    {
         j = nullptr;
+    }
     return j.dump();
 }

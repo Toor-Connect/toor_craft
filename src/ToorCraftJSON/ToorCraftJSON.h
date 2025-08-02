@@ -27,6 +27,7 @@ public:
                              const std::string &id,
                              const std::string &parentId,
                              const std::unordered_map<std::string, std::string> &fieldValues);
+    std::string deleteEntity(const std::string &entityId);
 
 private:
     ToorCraftJSON();

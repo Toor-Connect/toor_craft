@@ -489,3 +489,83 @@ fields:
   REQUIRE(queriedPost["status"] == "ok");
   REQUIRE(queriedPost["entity"]["author"] == "user1");
 }
+
+TEST_CASE("ToorCraftJSON handles deletion of entities, reference cleanup, and cascading removal")
+{
+  ToorCraftJSON &api = ToorCraftJSON::instance();
+
+  // --- 🏗 Schema Setup ---
+  std::unordered_map<std::string, std::string> schemas;
+  schemas["home.yaml"] = R"(
+profile_name: SmartHome
+children:
+  devices:
+    entity: Device
+fields:
+  name:
+    type: string
+)";
+
+  schemas["device.yaml"] = R"(
+entity_name: Device
+fields:
+  name:
+    type: string
+  sibling:
+    type: reference
+    target: Device
+)";
+
+  // ✅ Load schemas
+  REQUIRE(json::parse(api.loadSchemas(schemas))["status"] == "ok");
+
+  // ✅ Create Home
+  std::unordered_map<std::string, std::string> homePayload = {
+      {"name", "Casa Cascade"}};
+  REQUIRE(json::parse(api.createEntity("SmartHome", "homeRef", "", homePayload))["status"] == "ok");
+
+  // ✅ Create Device1 under Home
+  std::unordered_map<std::string, std::string> dev1Payload = {
+      {"name", "Device Alpha"}};
+  REQUIRE(json::parse(api.createEntity("Device", "deviceA", "homeRef", dev1Payload))["status"] == "ok");
+
+  // ✅ Create Device2 under Home
+  std::unordered_map<std::string, std::string> dev2Payload = {
+      {"name", "Device Beta"}};
+  REQUIRE(json::parse(api.createEntity("Device", "deviceB", "homeRef", dev2Payload))["status"] == "ok");
+
+  // ✅ Set cross-references
+  REQUIRE(json::parse(api.setField("deviceA", "sibling", "deviceB"))["status"] == "ok");
+  REQUIRE(json::parse(api.setField("deviceB", "sibling", "deviceA"))["status"] == "ok");
+
+  // 🔍 Confirm references before deletion
+  auto devA = json::parse(api.queryEntity("deviceA"));
+  auto devB = json::parse(api.queryEntity("deviceB"));
+  REQUIRE(devA["entity"]["sibling"] == "deviceB");
+  REQUIRE(devB["entity"]["sibling"] == "deviceA");
+
+  // ✅ Delete DeviceA
+  auto deleteA = json::parse(api.deleteEntity("deviceA"));
+  REQUIRE(deleteA["status"] == "ok");
+
+  // 🔍 Query DeviceA should return not_found
+  auto devAQuery = json::parse(api.queryEntity("deviceA"));
+  REQUIRE(devAQuery["status"] == "not_found");
+
+  // 🔍 DeviceB should now have sibling cleared (null or not present)
+  auto devBAfter = json::parse(api.queryEntity("deviceB"));
+  REQUIRE(devBAfter["status"] == "ok");
+  REQUIRE((!devBAfter["entity"].contains("sibling") || devBAfter["entity"]["sibling"].is_null()));
+
+  // ✅ Delete Home
+  auto deleteHome = json::parse(api.deleteEntity("homeRef"));
+  REQUIRE(deleteHome["status"] == "ok");
+
+  // 🔍 DeviceB should also be gone (cascade delete)
+  auto devBQuery = json::parse(api.queryEntity("deviceB"));
+  REQUIRE(devBQuery["status"] == "not_found");
+
+  // 🔍 Finally, check tree is now empty
+  auto treeAfter = json::parse(api.getTree());
+  REQUIRE(treeAfter["tree"].empty());
+}

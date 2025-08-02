@@ -313,3 +313,19 @@ std::string ToorCraftJSON::createEntity(const std::string &schemaName,
     }
     return response.dump(2);
 }
+
+std::string ToorCraftJSON::deleteEntity(const std::string &entityId)
+{
+    nlohmann::json response;
+    try
+    {
+        engine_.deleteEntity(entityId);
+        response["status"] = "ok";
+    }
+    catch (const std::exception &ex)
+    {
+        response["status"] = "error";
+        response["message"] = ex.what();
+    }
+    return response.dump(2);
+}
